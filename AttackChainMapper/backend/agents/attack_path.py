@@ -150,6 +150,7 @@ Rules:
 - confidence is a float 0.0-1.0 representing how realistic this chain is given the evidence
 - node_ids must reference actual node IDs from the graph (format: "file:path/to/file.py")
 - steps must connect logically — each step builds on the previous one
+- The `action` field MUST include the exact attacker payload (e.g. "Attacker sends: GET /user?id=1 OR 1=1" or "GET /api/proxy?url=http://169.254.169.254/latest/meta-data/")
 - Each step MUST include a `fix` field with a specific, actionable remediation (1-2 sentences)
 - Prefer chains that reach sensitive data, admin access, or data deletion"""
 
@@ -264,6 +265,7 @@ def _fallback_chains(findings: list[dict], graph: dict) -> list[dict]:
     has_no_auth = any("auth" in f["rule_id"].lower() or "admin" in f["file_path"].lower() for f in findings)
     has_dep_pip = any(f["source"] == "pip-audit" for f in findings)
     has_dep_npm = any(f["source"] == "npm-audit" for f in findings)
+    has_vercel_ssrf = any("proxy/route" in n["id"] for n in graph.get("nodes", [])) or any("ssrf" in f.get("rule_id", "").lower() for f in findings)
 
     if has_secret and has_no_auth and has_sql:
         chains.append({
@@ -319,6 +321,26 @@ def _fallback_chains(findings: list[dict], graph: dict) -> list[dict]:
             ),
             "confidence": 0.95,
             "node_ids": ["file:app/routes/user.py"],
+        })
+
+    if has_vercel_ssrf:
+        chains.append({
+            "title": "Vercel SSRF Attack — Internal Metadata Exfiltration",
+            "steps": [
+                {
+                    "node": "app/api/proxy/route.ts",
+                    "weakness": "Server-Side Request Forgery (SSRF) via unvalidated fetch()",
+                    "action": "Attacker sends: GET /api/proxy?url=http://169.254.169.254/latest/meta-data/ to access internal Vercel/AWS environments or steal environment variables",
+                    "fix": "Use a strict allowlist of permitted domains for outgoing requests. Never pass raw user input into fetch(). Ensure internal AWS/Vercel metadata IP ranges (169.254.169.254) are explicitly blocked.",
+                },
+            ],
+            "explanation": (
+                "The Next.js API route takes a user-supplied URL and passes it directly to fetch() without validation. "
+                "In a serverless environment like Vercel, attackers can use this SSRF to query the local loopback address "
+                "or cloud metadata endpoints, potentially leaking cloud provider credentials or internal microservice data."
+            ),
+            "confidence": 0.94,
+            "node_ids": ["file:app/api/proxy/route.ts"],
         })
 
     if has_dep_pip:
