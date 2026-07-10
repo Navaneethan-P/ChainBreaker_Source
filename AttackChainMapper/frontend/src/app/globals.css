@@ -4,6 +4,7 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── DARK THEME (default) ────────────────────────────────────────────── */
 :root {
   --bg-primary: #0B0F17;
   --bg-panel: #141B26;
@@ -19,10 +20,50 @@
   --border-bright: #475569;
   --glow-cyan: 0 0 20px rgba(14, 165, 233, 0.25);
   --glow-red: 0 0 20px rgba(239, 68, 68, 0.25);
+  --input-bg: #0B0F17;
+  --nav-bg: rgba(20, 27, 38, 0.85);
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
 }
 
-* {
+/* ── LIGHT THEME ─────────────────────────────────────────────────────── */
+body.light-theme {
+  --bg-primary: #f0f4f8;
+  --bg-panel: #ffffff;
+  --bg-card: #e8eef5;
+  --accent: #0284c7;          /* Sky-600 — same hue, slightly darker for legibility */
+  --accent-dim: rgba(2, 132, 199, 0.10);
+  --critical: #dc2626;
+  --high: #ea580c;
+  --low: #059669;
+  --text-primary: #0f172a;
+  --text-muted: #475569;
+  --border: #cbd5e1;
+  --border-bright: #94a3b8;
+  --glow-cyan: 0 0 16px rgba(2, 132, 199, 0.20);
+  --glow-red: 0 0 16px rgba(220, 38, 38, 0.20);
+  --input-bg: #f8fafc;
+  --nav-bg: rgba(255, 255, 255, 0.90);
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* ── SMOOTH TRANSITIONS for theme switching ───────────────────────────── */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+/* Override transition for animations that should stay instant */
+.pulse-dot,
+.stage-active,
+.node-active-glow,
+.animate-spin {
+  transition: none !important;
 }
 
 html,
@@ -55,6 +96,12 @@ body {
 .hero-gradient {
   background: radial-gradient(ellipse at 20% 50%, rgba(14, 165, 233, 0.06) 0%, transparent 50%),
               radial-gradient(ellipse at 80% 20%, rgba(239, 68, 68, 0.05) 0%, transparent 50%),
+              var(--bg-primary);
+}
+
+body.light-theme .hero-gradient {
+  background: radial-gradient(ellipse at 20% 50%, rgba(2, 132, 199, 0.06) 0%, transparent 50%),
+              radial-gradient(ellipse at 80% 20%, rgba(220, 38, 38, 0.04) 0%, transparent 50%),
               var(--bg-primary);
 }
 
@@ -100,12 +147,16 @@ body {
 
 /* Card hover effects */
 .chain-card-hover {
-  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease !important;
 }
 
 .chain-card-hover:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+body.light-theme .chain-card-hover:hover {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
 }
 
 /* Input focus glow */
@@ -158,4 +209,43 @@ body {
   color: var(--accent);
   animation: blink 1s step-end infinite;
   margin-left: 2px;
+}
+
+/* Fix badge for chain steps */
+.fix-badge {
+  background: rgba(16, 185, 129, 0.10);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #10b981;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.7rem;
+  line-height: 1.5;
+  margin-top: 0.5rem;
+}
+
+body.light-theme .fix-badge {
+  background: rgba(5, 150, 105, 0.08);
+  border-color: rgba(5, 150, 105, 0.30);
+  color: #047857;
+}
+
+/* Theme toggle button */
+.theme-toggle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border-bright);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.theme-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }

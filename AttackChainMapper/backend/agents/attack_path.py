@@ -8,6 +8,8 @@ Key feature: CONFIDENCE-CHECK LOOP
 - If confidence < 0.6, the agent re-examines that chain with a narrower follow-up
   before accepting or discarding it.
 - This is a genuine decision point, not a fixed script.
+
+Each chain step now includes an AI-generated `fix` recommendation.
 """
 import asyncio
 import json
@@ -34,7 +36,7 @@ async def reason_attack_paths(
     """
     Reason about attack chains using local Ollama LLM.
     Applies confidence-check loop for uncertain chains.
-    Returns a list of chain dicts.
+    Returns a list of chain dicts, each step including a `fix` field.
     """
     await queue.put({
         "type": "log",
@@ -130,7 +132,12 @@ Respond with ONLY valid JSON, no markdown, no explanation outside the JSON:
     {{
       "title": "Short descriptive name of the attack chain",
       "steps": [
-        {{"node": "file or component name", "weakness": "the vulnerability exploited", "action": "what the attacker does"}}
+        {{
+          "node": "file or component name",
+          "weakness": "the vulnerability exploited",
+          "action": "what the attacker does",
+          "fix": "concrete remediation: e.g. use parameterized queries, move secret to .env, add @login_required"
+        }}
       ],
       "explanation": "Plain-English explanation of the full attack path and its real-world impact",
       "confidence": 0.85,
@@ -143,6 +150,7 @@ Rules:
 - confidence is a float 0.0-1.0 representing how realistic this chain is given the evidence
 - node_ids must reference actual node IDs from the graph (format: "file:path/to/file.py")
 - steps must connect logically — each step builds on the previous one
+- Each step MUST include a `fix` field with a specific, actionable remediation (1-2 sentences)
 - Prefer chains that reach sensitive data, admin access, or data deletion"""
 
 
@@ -227,7 +235,12 @@ Question: Is this attack chain realistic? If yes, refine and strengthen it. If n
 Respond with ONLY valid JSON:
 {{
   "title": "Refined chain title",
-  "steps": [{{"node": "...", "weakness": "...", "action": "..."}}],
+  "steps": [{{
+    "node": "...",
+    "weakness": "...",
+    "action": "...",
+    "fix": "Specific remediation step (1-2 sentences)"
+  }}],
   "explanation": "Clear explanation of why this chain is realistic",
   "confidence": 0.75,
   "node_ids": ["file:path/to/file.py"]
@@ -249,7 +262,8 @@ def _fallback_chains(findings: list[dict], graph: dict) -> list[dict]:
     has_sql = any("sql" in f["rule_id"].lower() or "formatted" in f["rule_id"].lower() for f in findings)
     has_secret = any("secret" in f["rule_id"].lower() or "hardcoded" in f["message"].lower() for f in findings)
     has_no_auth = any("auth" in f["rule_id"].lower() or "admin" in f["file_path"].lower() for f in findings)
-    has_dep = any(f["source"] == "pip-audit" for f in findings)
+    has_dep_pip = any(f["source"] == "pip-audit" for f in findings)
+    has_dep_npm = any(f["source"] == "npm-audit" for f in findings)
 
     if has_secret and has_no_auth and has_sql:
         chains.append({
@@ -259,16 +273,19 @@ def _fallback_chains(findings: list[dict], graph: dict) -> list[dict]:
                     "node": "app/config.py",
                     "weakness": "Hardcoded SECRET_KEY and ADMIN_PASSWORD in plaintext",
                     "action": "Attacker reads source code or leaked credentials",
+                    "fix": "Move all secrets to environment variables and load via os.getenv(). Use python-dotenv for local development and a secrets manager (e.g. AWS Secrets Manager) in production.",
                 },
                 {
                     "node": "app/routes/admin.py",
                     "weakness": "No authentication on /admin/delete-user route",
                     "action": "Attacker accesses admin endpoint without any credentials",
+                    "fix": "Add @login_required (Flask) or Depends(get_current_admin_user) (FastAPI) to all admin routes. Enforce role-based access control (RBAC).",
                 },
                 {
                     "node": "app/routes/admin.py",
                     "weakness": "SQL injection in DELETE query via f-string",
                     "action": "Attacker injects SQL to delete or exfiltrate all user records",
+                    "fix": "Use parameterized queries: db.execute('DELETE FROM users WHERE id = ?', (user_id,)) — never interpolate user input into SQL strings.",
                 },
             ],
             "explanation": (
@@ -293,6 +310,7 @@ def _fallback_chains(findings: list[dict], graph: dict) -> list[dict]:
                     "node": "app/routes/user.py",
                     "weakness": "SQL injection via f-string in /user endpoint",
                     "action": "Attacker sends: GET /user?id=1 OR 1=1 to dump all records",
+                    "fix": "Replace f-string SQL with parameterized queries or use an ORM (SQLAlchemy). Validate and whitelist all input types before use in queries.",
                 },
             ],
             "explanation": (
@@ -303,14 +321,15 @@ def _fallback_chains(findings: list[dict], graph: dict) -> list[dict]:
             "node_ids": ["file:app/routes/user.py"],
         })
 
-    if has_dep:
+    if has_dep_pip:
         chains.append({
-            "title": "Outdated Dependency — Known CVE Exploitation",
+            "title": "Outdated Python Dependency — Known CVE Exploitation",
             "steps": [
                 {
                     "node": "requirements.txt",
                     "weakness": "Flask 0.12.2 — multiple known CVEs",
                     "action": "Attacker exploits public CVE to crash or destabilize the server",
+                    "fix": "Upgrade Flask to >=2.3.0 (latest stable). Pin versions in requirements.txt and add pip-audit to your CI pipeline to catch future vulnerabilities automatically.",
                 },
             ],
             "explanation": (
@@ -319,6 +338,28 @@ def _fallback_chains(findings: list[dict], graph: dict) -> list[dict]:
             ),
             "confidence": 0.80,
             "node_ids": ["file:requirements.txt"],
+        })
+
+    if has_dep_npm:
+        npm_findings = [f for f in findings if f["source"] == "npm-audit"]
+        first = npm_findings[0] if npm_findings else {}
+        chains.append({
+            "title": "Vulnerable Node.js Dependency — Supply Chain Risk",
+            "steps": [
+                {
+                    "node": "package.json",
+                    "weakness": first.get("message", "Vulnerable npm package with known CVE"),
+                    "action": "Attacker exploits the vulnerable package via crafted request or dependency confusion",
+                    "fix": "Run `npm audit fix` to automatically upgrade vulnerable packages. For critical CVEs (e.g. Next.js auth bypass), upgrade immediately and review all middleware configuration.",
+                },
+            ],
+            "explanation": (
+                "One or more npm packages have known CVEs. "
+                "Supply chain attacks via vulnerable dependencies are a top attack vector. "
+                "An attacker can exploit these to achieve RCE, auth bypass, or data leakage."
+            ),
+            "confidence": 0.82,
+            "node_ids": ["file:package.json"],
         })
 
     return chains[:3]

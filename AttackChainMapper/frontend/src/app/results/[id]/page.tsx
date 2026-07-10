@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import StatusFeed from "@/components/StatusFeed";
 import AttackGraph from "@/components/AttackGraph";
 import ChainCards from "@/components/ChainCards";
+import ThemeToggle from "@/components/ThemeToggle";
+import VulnTable from "@/components/VulnTable";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -47,6 +49,8 @@ export default function ResultsPage() {
   const [logs, setLogs] = useState<LogEvent[]>([]);
   const [graph, setGraph] = useState<any>(null);
   const [chains, setChains] = useState<any[]>([]);
+  const [findings, setFindings] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<"graph" | "vulns">("graph");
   const [reportUrl, setReportUrl] = useState<string>("");
   const [repoUrl, setRepoUrl] = useState<string>("");
   const [findingCount, setFindingCount] = useState<number>(0);
@@ -64,6 +68,7 @@ export default function ResultsPage() {
         if (data.run) setRepoUrl(data.run.repo_url);
         if (data.graph) setGraph(data.graph);
         if (data.chains?.length) setChains(data.chains);
+        if (data.findings) setFindings(data.findings);
         if (data.run?.report_url) setReportUrl(data.run.report_url);
         if (data.run?.status === "done") setIsDone(true);
         if (data.run?.status === "error") setIsError(true);
@@ -95,6 +100,12 @@ export default function ResultsPage() {
         if (evt.type === "done") {
           setIsDone(true);
           es.close();
+          fetch(`${API_URL}/api/runs/${runId}`)
+            .then((r) => r.json())
+            .then((data) => {
+              if (data.findings) setFindings(data.findings);
+              if (data.chains?.length) setChains(data.chains);
+            });
         }
         if (evt.type === "error") {
           setIsError(true);
@@ -151,6 +162,7 @@ export default function ResultsPage() {
               ✗ ERROR
             </span>
           )}
+          <ThemeToggle />
         </div>
       </nav>
 
@@ -257,42 +269,77 @@ export default function ResultsPage() {
 
           {/* RIGHT: Graph + Chains */}
           <div className="lg:col-span-2 flex flex-col gap-6">
-            {/* Attack Graph */}
-            <div
-              className="rounded-2xl overflow-hidden"
-              style={{ background: "var(--bg-panel)", border: "1px solid var(--border)" }}
-            >
-              <div
-                className="px-5 py-4 flex items-center gap-2"
-                style={{ borderBottom: "1px solid var(--border)" }}
+            
+            {/* TABS */}
+            <div className="flex items-center gap-2 mb-2">
+              <button
+                onClick={() => setActiveTab("graph")}
+                className="px-4 py-2 rounded-lg text-sm font-display font-semibold transition-all"
+                style={{
+                  background: activeTab === "graph" ? "var(--accent)" : "var(--bg-panel)",
+                  color: activeTab === "graph" ? "#000" : "var(--text-muted)",
+                  border: `1px solid ${activeTab === "graph" ? "var(--accent)" : "var(--border)"}`
+                }}
               >
-                <span className="font-display font-semibold text-sm">Attack Graph</span>
-                {graph?.nodes?.length > 0 && (
-                  <span className="text-xs font-mono ml-auto" style={{ color: "var(--text-muted)" }}>
-                    {graph.nodes.length} nodes · {graph.edges?.length || 0} edges
-                  </span>
-                )}
-              </div>
-              <div style={{ height: "380px" }}>
-                <AttackGraph graph={graph} chains={chains} />
-              </div>
+                Attack Graph & Chains
+              </button>
+              <button
+                onClick={() => setActiveTab("vulns")}
+                className="px-4 py-2 rounded-lg text-sm font-display font-semibold transition-all"
+                style={{
+                  background: activeTab === "vulns" ? "var(--accent)" : "var(--bg-panel)",
+                  color: activeTab === "vulns" ? "#000" : "var(--text-muted)",
+                  border: `1px solid ${activeTab === "vulns" ? "var(--accent)" : "var(--border)"}`
+                }}
+              >
+                Raw Vulnerabilities
+              </button>
             </div>
 
-            {/* Attack Chains */}
-            {chains.length > 0 && (
-              <div className="fade-in-up">
+            {activeTab === "graph" ? (
+              <>
+                {/* Attack Graph */}
                 <div
-                  className="flex items-center gap-2 mb-4"
+                  className="rounded-2xl overflow-hidden"
+                  style={{ background: "var(--bg-panel)", border: "1px solid var(--border)" }}
                 >
-                  <span
-                    className="w-1 h-5 rounded"
-                    style={{ background: "var(--accent)" }}
-                  />
-                  <span className="font-display font-semibold">
-                    Attack Chains — Ranked by Impact
-                  </span>
+                  <div
+                    className="px-5 py-4 flex items-center gap-2"
+                    style={{ borderBottom: "1px solid var(--border)" }}
+                  >
+                    <span className="font-display font-semibold text-sm">Attack Graph</span>
+                    {graph?.nodes?.length > 0 && (
+                      <span className="text-xs font-mono ml-auto" style={{ color: "var(--text-muted)" }}>
+                        {graph.nodes.length} nodes · {graph.edges?.length || 0} edges
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ height: "380px" }}>
+                    <AttackGraph graph={graph} chains={chains} />
+                  </div>
                 </div>
-                <ChainCards chains={chains} />
+
+                {/* Attack Chains */}
+                {chains.length > 0 && (
+                  <div className="fade-in-up">
+                    <div
+                      className="flex items-center gap-2 mb-4"
+                    >
+                      <span
+                        className="w-1 h-5 rounded"
+                        style={{ background: "var(--accent)" }}
+                      />
+                      <span className="font-display font-semibold">
+                        Attack Chains — Ranked by Impact
+                      </span>
+                    </div>
+                    <ChainCards chains={chains} />
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="fade-in-up">
+                <VulnTable findings={findings} />
               </div>
             )}
 
