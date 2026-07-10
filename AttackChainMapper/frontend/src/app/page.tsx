@@ -8,22 +8,22 @@ const DEMO_URL = "https://github.com/Navaneethan-P/Forge";
 
 const FEATURES = [
   {
-    icon: "🔍",
+    icon: "1.",
     title: "SAST + Dependency Scan",
     desc: "Semgrep + pip-audit surface every weakness automatically",
   },
   {
-    icon: "🕸️",
+    icon: "2.",
     title: "Code Graph Mapping",
     desc: "AST parser maps imports, routes & data flows into a live graph",
   },
   {
-    icon: "🧠",
-    title: "AI Attack-Chain Reasoning",
-    desc: "Local Qwen2.5-Coder reasons out realistic exploit paths with confidence scoring",
+    icon: "3.",
+    title: "Attack-Chain Reasoning",
+    desc: "Automated analysis reasons out realistic exploit paths with confidence scoring",
   },
   {
-    icon: "⚡",
+    icon: "4.",
     title: "Instant Live Report",
     desc: "Auto-deployed shareable URL — zero extra clicks, zero paid APIs",
   },
@@ -89,7 +89,6 @@ export default function HomePage() {
         className="sticky top-0 z-50 px-8 py-4 flex items-center justify-between"
       >
         <div className="flex items-center gap-3">
-          <span className="text-2xl">⚔️</span>
           <span
             className="font-display text-lg font-bold"
             style={{ color: "var(--accent)" }}
@@ -104,7 +103,7 @@ export default function HomePage() {
               border: "1px solid var(--accent)",
             }}
           >
-            BYTEFORGE 2026
+            ENTERPRISE EDITION
           </span>
         </div>
         <div className="flex items-center gap-4 text-sm" style={{ color: "var(--text-muted)" }}>
@@ -124,9 +123,9 @@ export default function HomePage() {
         <div className="max-w-3xl w-full text-center mb-12">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 mb-6 px-3 py-1.5 rounded-full text-xs font-mono"
-            style={{ background: "var(--accent-dim)", border: "1px solid rgba(0,217,255,0.3)", color: "var(--accent)" }}>
+            style={{ background: "var(--accent-dim)", border: "1px solid rgba(14,165,233,0.3)", color: "var(--accent)" }}>
             <span className="w-2 h-2 rounded-full bg-current pulse-dot" />
-            100% Open-Source · Local AI · Zero Paid APIs
+            100% Open-Source · Local Analysis · Zero Paid APIs
           </div>
 
           <h1
@@ -134,7 +133,7 @@ export default function HomePage() {
             style={{ color: "var(--text-primary)" }}
           >
             One click.{" "}
-            <span style={{ color: "var(--accent)" }}>AI traces</span>{" "}
+            <span style={{ color: "var(--accent)" }}>System traces</span>{" "}
             how weaknesses chain into a{" "}
             <span style={{ color: "var(--critical)" }}>real attack.</span>
           </h1>
@@ -201,14 +200,14 @@ export default function HomePage() {
                   Starting...
                 </span>
               ) : (
-                "⚡ Analyze"
+                "Analyze"
               )}
             </button>
           </div>
 
           {error && (
             <p className="mt-3 text-sm font-mono" style={{ color: "var(--critical)" }}>
-              ⚠ {error}
+              {error}
             </p>
           )}
 
@@ -267,11 +266,11 @@ export default function HomePage() {
           </h2>
           <div className="flex items-center justify-center gap-2 flex-wrap">
             {[
-              { label: "Scanner", icon: "🔍", color: "var(--accent)" },
-              { label: "Graph Builder", icon: "🕸️", color: "var(--accent)" },
-              { label: "Attack-Path AI", icon: "🧠", color: "var(--critical)" },
-              { label: "Impact Scorer", icon: "📊", color: "var(--high)" },
-              { label: "Report Deploy", icon: "🚀", color: "var(--low)" },
+              { label: "Scanner", icon: "", color: "var(--accent)" },
+              { label: "Graph Builder", icon: "", color: "var(--accent)" },
+              { label: "Attack-Path", icon: "", color: "var(--critical)" },
+              { label: "Impact Scorer", icon: "", color: "var(--high)" },
+              { label: "Report Deploy", icon: "", color: "var(--low)" },
             ].map((step, i, arr) => (
               <div key={i} className="flex items-center gap-2">
                 <div
@@ -282,7 +281,7 @@ export default function HomePage() {
                     minWidth: "110px",
                   }}
                 >
-                  <span className="text-xl">{step.icon}</span>
+                  {step.icon && <span className="text-xl">{step.icon}</span>}
                   <span
                     className="text-xs font-mono font-semibold"
                     style={{ color: step.color }}
@@ -306,9 +305,8 @@ export default function HomePage() {
         className="text-center py-6 text-xs font-mono"
         style={{ color: "var(--text-muted)", borderTop: "1px solid var(--border)" }}
       >
-        ⚔️ Attack Chain Mapper · BYTEFORGE 2026 ·{" "}
-        <span style={{ color: "var(--accent)" }}>100% Open-Source</span> · Local AI ·
-        Qwen2.5-Coder via Ollama
+        Attack Chain Mapper ·{" "}
+        <span style={{ color: "var(--accent)" }}>100% Open-Source</span> · Local Analysis Engine
       </footer>
     </main>
   );

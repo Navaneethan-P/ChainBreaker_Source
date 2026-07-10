@@ -31,12 +31,12 @@ interface LogEvent {
 }
 
 const STAGES: { key: Stage; label: string; icon: string }[] = [
-  { key: "cloning", label: "Clone Repo", icon: "📥" },
-  { key: "scanning", label: "Scan Vulns", icon: "🔍" },
-  { key: "graphing", label: "Build Graph", icon: "🕸️" },
-  { key: "reasoning", label: "AI Reasoning", icon: "🧠" },
-  { key: "scoring", label: "Score Impact", icon: "📊" },
-  { key: "deploying", label: "Deploy Report", icon: "🚀" },
+  { key: "cloning", label: "Clone Repo", icon: "" },
+  { key: "scanning", label: "Scan Vulns", icon: "" },
+  { key: "graphing", label: "Build Graph", icon: "" },
+  { key: "reasoning", label: "Analysis", icon: "" },
+  { key: "scoring", label: "Score Impact", icon: "" },
+  { key: "deploying", label: "Deploy Report", icon: "" },
 ];
 
 export default function ResultsPage() {
@@ -126,7 +126,6 @@ export default function ResultsPage() {
         }}
       >
         <a href="/" className="flex items-center gap-2">
-          <span className="text-xl">⚔️</span>
           <span className="font-display font-bold text-sm" style={{ color: "var(--accent)" }}>
             Attack Chain Mapper
           </span>
@@ -162,7 +161,7 @@ export default function ResultsPage() {
             className="mb-6 px-4 py-3 rounded-xl text-sm font-mono"
             style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", color: "var(--text-muted)" }}
           >
-            🔗 Analyzing:{" "}
+            Analyzing:{" "}
             <a href={repoUrl} target="_blank" rel="noopener noreferrer"
               style={{ color: "var(--accent)" }} className="hover:underline">
               {repoUrl}
@@ -211,7 +210,7 @@ export default function ResultsPage() {
                       <span className="w-2 h-2 rounded-full bg-current pulse-dot" />
                     )}
                     {(isPast || isDone) && !isCurrent && <span>✓</span>}
-                    <span>{stage.icon}</span>
+                    {stage.icon && <span>{stage.icon}</span>}
                     <span>{stage.label}</span>
                   </div>
                   {i < STAGES.length - 1 && (
@@ -267,7 +266,6 @@ export default function ResultsPage() {
                 className="px-5 py-4 flex items-center gap-2"
                 style={{ borderBottom: "1px solid var(--border)" }}
               >
-                <span className="text-sm">🕸️</span>
                 <span className="font-display font-semibold text-sm">Attack Graph</span>
                 {graph?.nodes?.length > 0 && (
                   <span className="text-xs font-mono ml-auto" style={{ color: "var(--text-muted)" }}>
@@ -308,7 +306,7 @@ export default function ResultsPage() {
                 }}
               >
                 <div className="font-display font-semibold mb-2" style={{ color: "var(--low)" }}>
-                  🚀 Live Report Deployed!
+                  Live Report Deployed!
                 </div>
                 <a
                   id="report-url-link"

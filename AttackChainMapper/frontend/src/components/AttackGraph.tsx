@@ -218,7 +218,6 @@ export default function AttackGraph({ graph, chains }: Props) {
         style={{ color: "var(--text-muted)" }}
       >
         <div className="text-center">
-          <div className="text-4xl mb-3 opacity-40">🕸️</div>
           <div className="text-sm">Graph will appear as the pipeline runs...</div>
           <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin mx-auto mt-4"
             style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }} />

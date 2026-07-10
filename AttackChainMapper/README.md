@@ -1,6 +1,4 @@
-# ⚔️ Attack Chain Mapper — Autonomous Security Sentinel
-
-> **BYTEFORGE 2026 Submission** — Open Track
+# Attack Chain Mapper — Autonomous Security Sentinel
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.11+-yellow.svg)](https://python.org)
@@ -11,23 +9,23 @@
 
 ---
 
-## 🎯 The Problem
+## The Problem
 
 Security scanners give you a flat list — *"you have 40 vulnerabilities"* — but they don't tell you how an attacker would actually chain them together to break in. Attack Chain Mapper fills that gap.
 
-## 💡 What Makes This Different
+## What Makes This Different
 
 | Feature | Attack Chain Mapper | Dependabot / Snyk |
 |---------|--------------------|--------------------|
 | Shows flat CVE list | ✅ | ✅ |
 | **Reasons about attack chains** | ✅ **Core feature** | ❌ |
-| Local AI, zero cost | ✅ | ❌ (paid API) |
+| Local Analysis, zero cost | ✅ | ❌ (paid API) |
 | Auto-deploys live report | ✅ | ❌ |
 | Works fully offline | ✅ | ❌ |
 
 ---
 
-## 🏗️ Architecture — 5-Agent Pipeline
+## Architecture — 5-Agent Pipeline
 
 ```
 GitHub Repo URL (1 click)
@@ -36,7 +34,7 @@ GitHub Repo URL (1 click)
         ↓
 [2] Graph-Builder     → Python AST → code component graph
         ↓
-[3] Attack-Path AI    → Ollama qwen2.5-coder:3b + confidence-check loop
+[3] Attack-Path Analyzer → Ollama qwen2.5-coder:3b + confidence-check loop
         ↓
 [4] Impact Scorer     → Critical / High / Low classification
         ↓
@@ -49,12 +47,12 @@ Live dashboard streams every step via SSE
 
 ---
 
-## 🛠️ Tech Stack — 100% Free & Open-Source
+## Tech Stack — 100% Free & Open-Source
 
 | Layer | Choice |
 |-------|--------|
 | Backend | Python 3.11 + FastAPI |
-| AI Reasoning | Ollama + `qwen2.5-coder:3b` (local, no API key) |
+| Reasoning | Ollama + `qwen2.5-coder:3b` (local, no API key) |
 | SAST | Semgrep Community Edition |
 | Dependency Scan | pip-audit |
 | Code Graph | Python `ast` module |
@@ -66,7 +64,7 @@ Live dashboard streams every step via SSE
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -76,7 +74,7 @@ python --version      # 3.11+
 node --version        # 18+
 ollama --version      # any
 
-# Pull the AI model (one-time, ~2GB):
+# Pull the model (one-time, ~2GB):
 ollama pull qwen2.5-coder:3b
 
 # Start Ollama service:
@@ -106,12 +104,12 @@ npm run dev
 
 1. Open `http://localhost:3000`
 2. Paste the demo repo URL: `https://github.com/Navaneethan-P/Forge`
-3. Click **⚡ Analyze**
+3. Click **Analyze**
 4. Watch the 5-agent pipeline run live
 
 ---
 
-## 🔬 Demo Vulnerabilities (Planted for Demo)
+## Demo Vulnerabilities (Planted for Demo)
 
 The `demo-repo/` contains 4 deliberately planted vulnerabilities:
 
@@ -122,7 +120,7 @@ The `demo-repo/` contains 4 deliberately planted vulnerabilities:
 | 3 | Hardcoded Secret | `app/config.py` | `SECRET_KEY` in plaintext |
 | 4 | Missing Auth | `app/routes/admin.py` | No check on `/admin/delete-user` |
 
-**The Attack Chain the AI discovers:**
+**The Attack Chain the system discovers:**
 ```
 Hardcoded Secret (config.py)
     → Unauthenticated Admin Route (admin.py)
@@ -132,7 +130,7 @@ Hardcoded Secret (config.py)
 
 ---
 
-## 🎨 Design System
+## Design System
 
 Dark SOC (Security Operations Center) dashboard aesthetic:
 
@@ -140,16 +138,16 @@ Dark SOC (Security Operations Center) dashboard aesthetic:
 |-------|-------|
 | Background | `#0B0F17` |
 | Panels | `#141B26` |
-| Accent (cyan) | `#00D9FF` |
-| Critical | `#FF3B5C` |
-| High | `#FFA630` |
-| Low / Safe | `#3DDC97` |
+| Accent (Sky Blue)| `#0ea5e9` |
+| Critical | `#ef4444` |
+| High | `#f97316` |
+| Low / Safe | `#10b981` |
 
 Fonts: **Space Grotesk** (headings) · **Inter** (body) · **JetBrains Mono** (code)
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 AttackChainMapper/
@@ -175,7 +173,7 @@ AttackChainMapper/
 
 ---
 
-## ⚠️ Ethical Use
+## Ethical Use
 
 - Only scan repos you own or have explicit permission to scan.
 - The `demo-repo/` contains deliberate vulnerabilities — **never deploy it to production**.
@@ -183,7 +181,7 @@ AttackChainMapper/
 
 ---
 
-## 🔮 Future Scope
+## Future Scope
 
 - Multi-language support (JavaScript, Java, Go)
 - CI/CD webhook integration (block merge on Critical chains)
@@ -193,4 +191,4 @@ AttackChainMapper/
 
 ---
 
-*Built for BYTEFORGE 2026 · MIT License · Author: Navaneethan P*
+*MIT License · Author: Navaneethan P*

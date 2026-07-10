@@ -128,10 +128,13 @@ def _heuristic_score(chain: dict) -> str:
 
 
 def _update_chain_impacts(run_id: int, chains: list[dict]):
+    from sqlmodel import select
     with Session(engine) as session:
-        db_chains = session.query(AttackChain).filter(
-            AttackChain.run_id == run_id
-        ).order_by(AttackChain.chain_index).all()
+        db_chains = session.exec(
+            select(AttackChain)
+            .where(AttackChain.run_id == run_id)
+            .order_by(AttackChain.chain_index)
+        ).all()
 
         for i, chain in enumerate(chains):
             if i < len(db_chains):

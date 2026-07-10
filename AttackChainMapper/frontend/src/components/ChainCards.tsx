@@ -34,9 +34,9 @@ const IMPACT_BG: Record<string, string> = {
 };
 
 const IMPACT_ICONS: Record<string, string> = {
-  Critical: "🔴",
-  High: "🟠",
-  Low: "🟢",
+  Critical: "CRITICAL",
+  High: "HIGH",
+  Low: "LOW",
 };
 
 export default function ChainCards({ chains }: Props) {
@@ -76,7 +76,7 @@ export default function ChainCards({ chains }: Props) {
                       border: `1px solid ${color}50`,
                     }}
                   >
-                    {IMPACT_ICONS[chain.impact]} {chain.impact}
+                    {chain.impact}
                   </span>
                   <span
                     className="text-xs font-mono"
@@ -139,13 +139,13 @@ export default function ChainCards({ chains }: Props) {
                         className="font-mono mb-1"
                         style={{ color: "var(--accent)" }}
                       >
-                        📄 {step.node}
+                        {step.node}
                       </div>
                       <div
                         className="font-semibold mb-1"
                         style={{ color }}
                       >
-                        ⚠ {step.weakness}
+                        {step.weakness}
                       </div>
                       <div style={{ color: "var(--text-muted)" }}>
                         → {step.action}

@@ -16,14 +16,14 @@ interface StatusFeedProps {
 }
 
 const stageIcon: Record<string, string> = {
-  cloning: "📥",
-  scanning: "🔍",
-  graphing: "🕸️",
-  reasoning: "🧠",
-  scoring: "📊",
-  deploying: "🚀",
-  done: "✅",
-  error: "❌",
+  cloning: "",
+  scanning: "",
+  graphing: "",
+  reasoning: "",
+  scoring: "",
+  deploying: "",
+  done: "✓",
+  error: "✗",
   log: "·",
   heartbeat: "·",
   status: "·",
@@ -50,7 +50,6 @@ export default function StatusFeed({ logs, currentStage, isDone, isError }: Stat
         className="px-5 py-4 flex items-center gap-2"
         style={{ borderBottom: "1px solid var(--border)" }}
       >
-        <span className="text-sm">📡</span>
         <span className="font-display font-semibold text-sm">Live Pipeline Feed</span>
         {!isDone && !isError && (
           <span
@@ -81,7 +80,6 @@ export default function StatusFeed({ logs, currentStage, isDone, isError }: Stat
             style={{ color: "var(--text-muted)" }}
           >
             <div className="text-center">
-              <div className="text-3xl mb-3">⏳</div>
               <div>Waiting for pipeline to start...</div>
             </div>
           </div>
@@ -114,7 +112,7 @@ export default function StatusFeed({ logs, currentStage, isDone, isError }: Stat
                     : isError
                     ? "✗"
                     : isDone
-                    ? "🎉"
+                    ? "✓"
                     : "·"}
                 </span>
                 <span className="leading-relaxed break-words">{log.message}</span>
