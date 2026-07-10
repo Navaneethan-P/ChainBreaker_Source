@@ -128,14 +128,7 @@ export default function ResultsPage() {
   return (
     <main className="min-h-screen" style={{ background: "var(--bg-primary)" }}>
       {/* TOP NAV */}
-      <nav
-        className="sticky top-0 z-50 px-6 py-4 flex items-center justify-between"
-        style={{
-          background: "rgba(20,27,38,0.9)",
-          borderBottom: "1px solid var(--border)",
-          backdropFilter: "blur(12px)",
-        }}
-      >
+      <nav className="nav-glass sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
         <a href="/" className="flex items-center gap-2">
           <span className="font-display font-bold text-sm" style={{ color: "var(--accent)" }}>
             Attack Chain Mapper
@@ -169,10 +162,7 @@ export default function ResultsPage() {
       <div className="px-6 py-8 max-w-7xl mx-auto">
         {/* Repo URL banner */}
         {repoUrl && (
-          <div
-            className="mb-6 px-4 py-3 rounded-xl text-sm font-mono"
-            style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", color: "var(--text-muted)" }}
-          >
+          <div className="mb-6 px-4 py-3 rounded-xl text-sm font-mono glass-card">
             Analyzing:{" "}
             <a href={repoUrl} target="_blank" rel="noopener noreferrer"
               style={{ color: "var(--accent)" }} className="hover:underline">
@@ -182,10 +172,7 @@ export default function ResultsPage() {
         )}
 
         {/* STAGE PROGRESS BAR */}
-        <div
-          className="mb-8 p-5 rounded-2xl"
-          style={{ background: "var(--bg-panel)", border: "1px solid var(--border)" }}
-        >
+        <div className="mb-8 p-5 rounded-2xl glass-panel">
           <div className="flex items-center gap-1 overflow-x-auto pb-2">
             {STAGES.map((stage, i) => {
               const isCurrent = stage.key === currentStage && !isDone && !isError;
@@ -247,8 +234,7 @@ export default function ResultsPage() {
             ].map((stat) => (
               <div
                 key={stat.label}
-                className="p-5 rounded-xl text-center"
-                style={{ background: "var(--bg-panel)", border: "1px solid var(--border)" }}
+                className="p-5 rounded-xl text-center glass-card"
               >
                 <div className="font-display text-3xl font-bold" style={{ color: stat.color }}>
                   {stat.value}
@@ -299,10 +285,7 @@ export default function ResultsPage() {
             {activeTab === "graph" ? (
               <>
                 {/* Attack Graph */}
-                <div
-                  className="rounded-2xl overflow-hidden"
-                  style={{ background: "var(--bg-panel)", border: "1px solid var(--border)" }}
-                >
+                <div className="rounded-2xl overflow-hidden glass-panel">
                   <div
                     className="px-5 py-4 flex items-center gap-2"
                     style={{ borderBottom: "1px solid var(--border)" }}

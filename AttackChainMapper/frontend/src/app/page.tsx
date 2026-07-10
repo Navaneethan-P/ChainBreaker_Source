@@ -142,14 +142,7 @@ export default function HomePage() {
         </div>
 
         {/* ── INPUT CARD ────────────────────────────────────── */}
-        <div
-          className="w-full max-w-2xl rounded-2xl p-6 md:p-8 mb-10"
-          style={{
-            background: "var(--bg-panel)",
-            border: "1px solid var(--border-bright)",
-            boxShadow: "var(--shadow-card)",
-          }}
-        >
+        <div className="w-full max-w-2xl rounded-2xl p-6 md:p-8 mb-10 glass-panel">
           <label
             htmlFor="repo-url"
             className="block text-xs font-mono font-semibold mb-2 tracking-wider"
@@ -220,11 +213,7 @@ export default function HomePage() {
           {FEATURES.map((f, i) => (
             <div
               key={i}
-              className="rounded-xl p-5 chain-card-hover"
-              style={{
-                background: "var(--bg-panel)",
-                border: "1px solid var(--border)",
-              }}
+              className="rounded-xl p-5 chain-card-hover glass-card"
             >
               <div
                 className="font-mono text-xs font-bold mb-3"

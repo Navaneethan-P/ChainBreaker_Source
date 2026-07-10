@@ -6,44 +6,67 @@
 
 /* ── DARK THEME (default) ────────────────────────────────────────────── */
 :root {
-  --bg-primary: #0B0F17;
-  --bg-panel: #141B26;
-  --bg-card: #1A2333;
-  --accent: #0ea5e9;
-  --accent-dim: rgba(14, 165, 233, 0.12);
-  --critical: #ef4444;
-  --high: #f97316;
-  --low: #10b981;
-  --text-primary: #f8fafc;
+  --bg-primary: #050505;
+  --bg-panel: rgba(15, 23, 42, 0.6);
+  --bg-card: rgba(30, 41, 59, 0.7);
+  --accent: #00f0ff;
+  --accent-dim: rgba(0, 240, 255, 0.1);
+  --critical: #ff0055;
+  --high: #ff8800;
+  --low: #00ffa3;
+  --text-primary: #ffffff;
   --text-muted: #94a3b8;
-  --border: #334155;
-  --border-bright: #475569;
-  --glow-cyan: 0 0 20px rgba(14, 165, 233, 0.25);
-  --glow-red: 0 0 20px rgba(239, 68, 68, 0.25);
-  --input-bg: #0B0F17;
-  --nav-bg: rgba(20, 27, 38, 0.85);
-  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --border: rgba(255, 255, 255, 0.1);
+  --border-bright: rgba(255, 255, 255, 0.2);
+  --glow-cyan: 0 0 20px rgba(0, 240, 255, 0.4);
+  --glow-red: 0 0 20px rgba(255, 0, 85, 0.4);
+  --input-bg: rgba(0, 0, 0, 0.5);
+  --nav-bg: rgba(5, 5, 5, 0.7);
+  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+/* Glassmorphism Utility */
+.glass-panel {
+  background: var(--bg-panel);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+}
+.glass-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 /* ── LIGHT THEME ─────────────────────────────────────────────────────── */
 body.light-theme {
-  --bg-primary: #f0f4f8;
-  --bg-panel: #ffffff;
-  --bg-card: #e8eef5;
-  --accent: #0284c7;          /* Sky-600 — same hue, slightly darker for legibility */
-  --accent-dim: rgba(2, 132, 199, 0.10);
-  --critical: #dc2626;
-  --high: #ea580c;
-  --low: #059669;
+  --bg-primary: #f8fafc;
+  --bg-panel: rgba(255, 255, 255, 0.7);
+  --bg-card: rgba(241, 245, 249, 0.8);
+  --accent: #0ea5e9;
+  --accent-dim: rgba(14, 165, 233, 0.15);
+  --critical: #ef4444;
+  --high: #f97316;
+  --low: #10b981;
   --text-primary: #0f172a;
-  --text-muted: #475569;
-  --border: #cbd5e1;
-  --border-bright: #94a3b8;
-  --glow-cyan: 0 0 16px rgba(2, 132, 199, 0.20);
-  --glow-red: 0 0 16px rgba(220, 38, 38, 0.20);
-  --input-bg: #f8fafc;
-  --nav-bg: rgba(255, 255, 255, 0.90);
-  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.08);
+  --text-muted: #64748b;
+  --border: rgba(0, 0, 0, 0.1);
+  --border-bright: rgba(0, 0, 0, 0.2);
+  --glow-cyan: 0 0 16px rgba(14, 165, 233, 0.3);
+  --glow-red: 0 0 16px rgba(239, 68, 68, 0.3);
+  --input-bg: rgba(255, 255, 255, 0.9);
+  --nav-bg: rgba(248, 250, 252, 0.8);
+  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+.nav-glass {
+  background: var(--nav-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
 }
 
 /* ── SMOOTH TRANSITIONS for theme switching ───────────────────────────── */
