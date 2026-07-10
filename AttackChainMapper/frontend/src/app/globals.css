@@ -1,0 +1,161 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #0B0F17;
+  --bg-panel: #141B26;
+  --bg-card: #1A2333;
+  --accent: #00D9FF;
+  --accent-dim: rgba(0, 217, 255, 0.12);
+  --critical: #FF3B5C;
+  --high: #FFA630;
+  --low: #3DDC97;
+  --text-primary: #E8EDF2;
+  --text-muted: #8B98A9;
+  --border: #1E2A3A;
+  --border-bright: #2A3A50;
+  --glow-cyan: 0 0 20px rgba(0, 217, 255, 0.25);
+  --glow-red: 0 0 20px rgba(255, 59, 92, 0.25);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+/* Typography helpers */
+.font-display { font-family: 'Space Grotesk', sans-serif; }
+.font-mono { font-family: 'JetBrains Mono', monospace; }
+
+/* Glowing border utility */
+.glow-border-cyan {
+  border: 1px solid var(--accent);
+  box-shadow: var(--glow-cyan);
+}
+
+/* Animated gradient background for hero */
+.hero-gradient {
+  background: radial-gradient(ellipse at 20% 50%, rgba(0, 217, 255, 0.06) 0%, transparent 50%),
+              radial-gradient(ellipse at 80% 20%, rgba(255, 59, 92, 0.05) 0%, transparent 50%),
+              var(--bg-primary);
+}
+
+/* Animated scan line effect */
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+.scanline::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0.4;
+  animation: scanline 4s linear infinite;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Pulsing dot for active states */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.pulse-dot {
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+/* Stage progress glow */
+@keyframes stage-glow {
+  0%, 100% { box-shadow: 0 0 8px rgba(0, 217, 255, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(0, 217, 255, 0.7); }
+}
+
+.stage-active {
+  animation: stage-glow 1.5s ease-in-out infinite;
+}
+
+/* Card hover effects */
+.chain-card-hover {
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.chain-card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* Input focus glow */
+.input-glow:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.15);
+}
+
+/* Shimmer animation for loading states */
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, var(--bg-panel) 25%, var(--bg-card) 50%, var(--bg-panel) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease infinite;
+}
+
+/* Graph node glow animation */
+@keyframes node-glow {
+  0%, 100% { filter: drop-shadow(0 0 4px rgba(0, 217, 255, 0.4)); }
+  50% { filter: drop-shadow(0 0 12px rgba(0, 217, 255, 0.9)); }
+}
+
+.node-active-glow {
+  animation: node-glow 1.5s ease-in-out infinite;
+}
+
+/* Fade in animation */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+/* Typewriter cursor */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.cursor-blink::after {
+  content: '█';
+  color: var(--accent);
+  animation: blink 1s step-end infinite;
+  margin-left: 2px;
+}
