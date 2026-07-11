@@ -1,0 +1,87 @@
+{
+  "name": "attack-chain-mapper",
+  "version": "1.0.0",
+  "description": "Autonomous security sentinel — maps how vulnerabilities chain into real attack paths. Local, encrypted, open-source.",
+  "author": "Navaneethan P <https://github.com/Navaneethan-P>",
+  "repository": "https://github.com/Navaneethan-P/AttackChainMapper",
+  "license": "MIT",
+  "main": "electron/main.js",
+  "homepage": "https://github.com/Navaneethan-P/Forge",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
+    "dev:vite": "vite",
+    "dev:electron": "wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .",
+    "preview": "vite preview",
+    "build:win": "vite build && electron-builder --win",
+    "build:mac": "vite build && electron-builder --mac",
+    "build:linux": "vite build && electron-builder --linux"
+  },
+  "dependencies": {
+    "d3": "^7.9.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.23.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^31.1.0",
+    "electron-builder": "^26.15.3",
+    "vite": "^5.3.1",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "io.github.navaneethan-p.attack-chain-mapper",
+    "productName": "Attack Chain Mapper",
+    "copyright": "Copyright 2025 Navaneethan P",
+    "publish": null,
+    "directories": {
+      "output": "dist-app"
+    },
+    "files": [
+      "dist/**",
+      "electron/**",
+      "!node_modules"
+    ],
+    "extraResources": [
+      {
+        "from": "../backend",
+        "to": "backend",
+        "filter": [
+          "**/*",
+          "!__pycache__",
+          "!*.pyc",
+          "!sentinel.db"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Attack Chain Mapper",
+      "license": "../LICENSE"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.developer-tools"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Development"
+    }
+  }
+}
