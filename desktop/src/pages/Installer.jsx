@@ -26,13 +26,17 @@ const KNOWN_MODELS = [
   },
 ]
 
-const STEPS = ['System Check', 'Select Model', 'Install', 'Ready']
+const CLOUD_PROVIDERS = [
+  { id: 'claude', name: 'Anthropic Claude', defaultModel: 'claude-3-5-haiku-20241022' },
+  { id: 'gemini', name: 'Google Gemini', defaultModel: 'gemini-2.0-flash' },
+  { id: 'openai', name: 'OpenAI GPT', defaultModel: 'gpt-4o-mini' },
+]
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 async function fetchOllamaModels() {
   try {
-    const res = await fetch(`${OLLAMA_API}/api/tags`, { signal: AbortSignal.timeout(4000) })
+    const res = await fetch(`${OLLAMA_API}/api/tags`, { signal: AbortSignal.timeout(2000) })
     if (!res.ok) return []
     const data = await res.json()
     return (data.models || []).map(m => m.name)
@@ -46,176 +50,175 @@ function modelIsInstalled(modelId, installedModels) {
   return installedModels.some(m => m === modelId || m.startsWith(base + ':'))
 }
 
-// ─── Step 1: System Check ──────────────────────────────────────────────────────
-function StepSystemCheck({ onNext }) {
-  const [ollamaStatus, setOllamaStatus]   = useState({ status: 'pending', models: [], detail: 'Checking...' })
-  const [backendStatus, setBackendStatus] = useState({ status: 'pending', detail: 'Checking...' })
-  const [checking, setChecking]           = useState(false)
-  const [checked, setChecked]             = useState(false)
-
-  const runCheck = useCallback(async () => {
-    setChecking(true)
-    setOllamaStatus({ status: 'pending', models: [], detail: 'Checking...' })
-    setBackendStatus({ status: 'pending', detail: 'Checking...' })
-
-    // Check Ollama directly via HTTP (more reliable than IPC in some setups)
-    const models   = await fetchOllamaModels()
-    const ollamaOk = models.length >= 0  // API responded
-
-    // Fetch via fetch() directly since Ollama allows all origins
-    let ollamaRunning = false
-    try {
-      const r = await fetch(`${OLLAMA_API}/api/tags`, { signal: AbortSignal.timeout(3000) })
-      ollamaRunning = r.ok
-    } catch { ollamaRunning = false }
-
-    setOllamaStatus({
-      status: ollamaRunning ? 'pass' : 'fail',
-      models,
-      detail: ollamaRunning
-        ? models.length > 0
-          ? `Running — ${models.length} model(s) available: ${models.slice(0,2).join(', ')}`
-          : 'Running — no models pulled yet'
-        : 'Not detected on port 11434. Run: ollama serve',
-    })
-
-    // Backend check
-    let backendRunning = false
-    try {
-      const r2 = await fetch('http://127.0.0.1:8000/health', { signal: AbortSignal.timeout(3000) })
-      backendRunning = r2.ok
-    } catch { backendRunning = false }
-
-    setBackendStatus({
-      status: backendRunning ? 'pass' : 'warn',
-      detail: backendRunning
-        ? 'Engine responding on port 8000'
-        : 'Not running. Start with: uvicorn main:app --port 8000 --host 127.0.0.1',
-    })
-
-    setChecked(true)
-    setChecking(false)
-  }, [])
-
-  useEffect(() => { runCheck() }, [runCheck])
-
-  const ollamaOk = ollamaStatus.status === 'pass'
-  const canNext  = checked && ollamaOk
-
+// ─── Step 0: Welcome / Choose Mode ─────────────────────────────────────────────
+function StepWelcome({ onSelectMode }) {
   return (
     <>
       <div className="wizard-panel-header">
-        <div className="wizard-step-indicator">Step 1 of 4</div>
-        <div className="wizard-panel-title">System Requirements</div>
+        <div className="wizard-step-indicator">Step 1 of Setup</div>
+        <div className="wizard-panel-title">Choose AI Engine</div>
         <div className="wizard-panel-desc">
-          Verifying that Ollama and the analysis engine are available.
+          Attack Chain Mapper requires an AI model to reason about vulnerabilities.
+          Choose how you want to run the engine.
         </div>
       </div>
 
-      <div className="wizard-panel-body">
-        {[
-          {
-            key: 'ollama', label: 'Ollama Service',
-            sub: 'Local LLM inference — ollama.com',
-            status: ollamaStatus.status,
-            detail: ollamaStatus.detail,
-          },
-          {
-            key: 'backend', label: 'Analysis Engine',
-            sub: 'FastAPI backend on port 8000',
-            status: backendStatus.status,
-            detail: backendStatus.detail,
-          },
-        ].map(({ key, label, sub, status, detail }) => (
-          <div className="check-row" key={key}>
-            <div>
-              <div className="check-row-label">{label}</div>
-              <div className="check-row-sub">{sub}</div>
+      <div className="wizard-panel-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="model-option" onClick={() => onSelectMode('local')}>
+          <div style={{ flex: 1 }}>
+            <div className="flex items-center gap-2">
+              <span className="model-option-name" style={{ color: 'var(--accent)' }}>Private Local AI (Encrypted)</span>
+              <span className="badge badge-safe">Recommended</span>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div className={`check-row-status ${status}`}>
-                {status === 'pending' ? 'Checking...' :
-                 status === 'pass'    ? 'Pass'    :
-                 status === 'warn'    ? 'Warning' : 'Fail'}
-              </div>
-              <div className="check-row-sub" style={{ maxWidth: 240 }}>{detail}</div>
+            <div className="model-option-meta" style={{ marginTop: 6, lineHeight: 1.5 }}>
+              Runs entirely on your machine via Ollama. No data ever leaves your computer. 
+              Zero-trust architecture. Requires ~4GB RAM.
             </div>
           </div>
-        ))}
+        </div>
 
-        {checked && !ollamaOk && (
-          <div style={{
-            background: 'var(--critical-dim)',
-            border: '1px solid var(--critical-border)',
-            borderRadius: 'var(--radius-md)',
-            padding: 'var(--space-3) var(--space-4)',
-            fontSize: 12,
-            color: 'var(--critical)',
-            lineHeight: 1.6,
-          }}>
-            Ollama is not responding on port 11434.<br />
-            Start it in a terminal:&nbsp;
-            <code style={{ fontFamily: 'var(--font-mono)' }}>ollama serve</code><br />
-            Then click Recheck below.
+        <div className="model-option" onClick={() => onSelectMode('cloud')}>
+          <div style={{ flex: 1 }}>
+            <div className="flex items-center gap-2">
+              <span className="model-option-name" style={{ color: 'var(--info)' }}>Cloud API (High Performance)</span>
+            </div>
+            <div className="model-option-meta" style={{ marginTop: 6, lineHeight: 1.5 }}>
+              Connect directly to Claude, Gemini, or OpenAI using your own API key. 
+              Much faster and does not require a powerful local machine.
+            </div>
           </div>
-        )}
-      </div>
-
-      <div className="wizard-panel-footer">
-        <button
-          className="btn btn-ghost"
-          onClick={runCheck}
-          disabled={checking}
-        >
-          {checking ? 'Checking...' : 'Recheck'}
-        </button>
-        <button
-          className="btn btn-primary"
-          disabled={!canNext}
-          onClick={onNext}
-        >
-          Continue
-        </button>
+        </div>
       </div>
     </>
   )
 }
 
-// ─── Step 2: Model Selection ───────────────────────────────────────────────────
-function StepModelSelect({ onNext, onBack, selected, setSelected }) {
-  const [installedModels, setInstalledModels] = useState([])
-
-  useEffect(() => {
-    fetchOllamaModels().then(setInstalledModels)
+// ─── Step 1: Local Check & Auto-Install Script ─────────────────────────────────
+function StepLocalCheck({ onNext, onBack }) {
+  const [ollamaStatus, setOllamaStatus] = useState('pending') // 'pending', 'pass', 'fail'
+  
+  const checkOllama = useCallback(async () => {
+    setOllamaStatus('pending')
+    try {
+      const r = await fetch(`${OLLAMA_API}/api/tags`, { signal: AbortSignal.timeout(2000) })
+      if (r.ok) setOllamaStatus('pass')
+      else setOllamaStatus('fail')
+    } catch { 
+      setOllamaStatus('fail')
+    }
   }, [])
 
-  // If the currently selected model is already installed, we can skip the download
+  useEffect(() => { checkOllama() }, [checkOllama])
+
+  const psScript = `
+# Attack Chain Mapper - Auto Setup
+Write-Host "Installing Ollama..." -ForegroundColor Cyan
+winget install -e --id Ollama.Ollama
+Write-Host "Starting Ollama..." -ForegroundColor Cyan
+Start-Process "ollama" -ArgumentList "serve" -NoNewWindow
+Start-Sleep -Seconds 3
+Write-Host "Pulling Qwen2.5-Coder model..." -ForegroundColor Cyan
+ollama pull qwen2.5-coder:3b
+Write-Host "Done! You can now click Continue." -ForegroundColor Green
+  `.trim()
+
+  const copyScript = () => {
+    navigator.clipboard.writeText(psScript)
+  }
+
+  return (
+    <>
+      <div className="wizard-panel-header">
+        <div className="wizard-step-indicator">Local Engine Setup</div>
+        <div className="wizard-panel-title">System Requirements</div>
+        <div className="wizard-panel-desc">Checking for Ollama installation on port 11434.</div>
+      </div>
+
+      <div className="wizard-panel-body">
+        <div className="check-row">
+          <div>
+            <div className="check-row-label">Ollama Service</div>
+            <div className="check-row-sub">Local LLM inference — ollama.com</div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div className={`check-row-status ${ollamaStatus}`}>
+              {ollamaStatus === 'pending' ? 'Checking...' : ollamaStatus === 'pass' ? 'Found' : 'Not Found'}
+            </div>
+          </div>
+        </div>
+
+        {ollamaStatus === 'fail' && (
+          <div style={{
+            background: 'var(--surface-base)',
+            border: '1px solid var(--surface-border)',
+            borderRadius: 'var(--radius-md)',
+            padding: 'var(--space-4)',
+            marginTop: 16
+          }}>
+            <div style={{ fontSize: 13, color: 'var(--critical)', marginBottom: 8, fontWeight: 500 }}>
+              Ollama is not installed or not running.
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12 }}>
+              Run this command in <strong>PowerShell</strong> to automatically install Ollama and the AI model:
+            </div>
+            <div style={{ position: 'relative' }}>
+              <pre style={{
+                background: '#09090b', padding: 12, borderRadius: 6, fontSize: 11,
+                border: '1px solid #27272a', color: '#a1a1aa', overflowX: 'auto',
+                whiteSpace: 'pre-wrap'
+              }}>
+                {psScript}
+              </pre>
+              <button 
+                onClick={copyScript}
+                className="btn btn-ghost" 
+                style={{ position: 'absolute', top: 4, right: 4, padding: '4px 8px', fontSize: 10 }}>
+                Copy
+              </button>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 12 }}>
+              After the script finishes, click <strong>Recheck</strong>.
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="wizard-panel-footer">
+        <button className="btn btn-ghost" onClick={onBack}>Back</button>
+        <div className="flex gap-2">
+          {ollamaStatus === 'fail' && (
+            <button className="btn btn-ghost" onClick={checkOllama}>Recheck</button>
+          )}
+          <button className="btn btn-primary" disabled={ollamaStatus !== 'pass'} onClick={onNext}>
+            Continue
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ─── Step 2: Local Model Selection ─────────────────────────────────────────────
+function StepLocalModel({ onNext, onBack, selected, setSelected }) {
+  const [installedModels, setInstalledModels] = useState([])
+
+  useEffect(() => { fetchOllamaModels().then(setInstalledModels) }, [])
+
   const selectedInstalled = modelIsInstalled(selected, installedModels)
 
   return (
     <>
       <div className="wizard-panel-header">
-        <div className="wizard-step-indicator">Step 2 of 4</div>
+        <div className="wizard-step-indicator">Local Engine Setup</div>
         <div className="wizard-panel-title">Select AI Model</div>
-        <div className="wizard-panel-desc">
-          Choose the model for vulnerability reasoning. Runs entirely on your machine.
-          {installedModels.length > 0 && (
-            <span style={{ color: 'var(--safe)', marginLeft: 6, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
-              {installedModels.length} already installed
-            </span>
-          )}
-        </div>
+        <div className="wizard-panel-desc">Choose the model for vulnerability reasoning.</div>
       </div>
 
       <div className="wizard-panel-body">
         {KNOWN_MODELS.map((m) => {
           const installed = modelIsInstalled(m.id, installedModels)
           return (
-            <div
-              key={m.id}
-              className={`model-option ${selected === m.id ? 'selected' : ''}`}
-              onClick={() => setSelected(m.id)}
-            >
+            <div key={m.id} className={`model-option ${selected === m.id ? 'selected' : ''}`} onClick={() => setSelected(m.id)}>
               <div className="model-option-radio" />
               <div style={{ flex: 1 }}>
                 <div className="flex items-center gap-2">
@@ -229,43 +232,21 @@ function StepModelSelect({ onNext, onBack, selected, setSelected }) {
           )
         })}
 
-        {/* Show any installed models not in the known list */}
-        {installedModels
-          .filter(name => !KNOWN_MODELS.some(m => modelIsInstalled(m.id, [name])))
-          .map(name => (
-            <div
-              key={name}
-              className={`model-option ${selected === name ? 'selected' : ''}`}
-              onClick={() => setSelected(name)}
-            >
-              <div className="model-option-radio" />
-              <div style={{ flex: 1 }}>
-                <div className="flex items-center gap-2">
-                  <span className="model-option-name">{name}</span>
-                  <span className="badge badge-safe">Installed</span>
-                </div>
-                <div className="model-option-meta">Available in Ollama</div>
-              </div>
-            </div>
-          ))
-        }
-
         {selectedInstalled ? (
           <div style={{
             background: 'var(--safe-dim)', border: '1px solid var(--safe-border)',
-            borderRadius: 'var(--radius-md)', padding: 'var(--space-3) var(--space-4)',
-            fontSize: 12, color: 'var(--safe)', fontFamily: 'var(--font-mono)',
+            borderRadius: 'var(--radius-md)', padding: '12px 16px',
+            fontSize: 12, color: 'var(--safe)', fontFamily: 'var(--font-mono)', marginTop: 16
           }}>
             This model is already installed. No download required.
           </div>
         ) : (
           <div style={{
             background: 'var(--surface-base)', border: '1px solid var(--surface-border)',
-            borderRadius: 'var(--radius-md)', padding: 'var(--space-3) var(--space-4)',
-            fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5,
+            borderRadius: 'var(--radius-md)', padding: '12px 16px',
+            fontSize: 12, color: 'var(--text-secondary)', marginTop: 16
           }}>
-            The selected model will be downloaded via Ollama. One-time download.
-            The model never leaves your machine.
+            The selected model will be downloaded via Ollama.
           </div>
         )}
       </div>
@@ -273,127 +254,76 @@ function StepModelSelect({ onNext, onBack, selected, setSelected }) {
       <div className="wizard-panel-footer">
         <button className="btn btn-ghost" onClick={onBack}>Back</button>
         <button className="btn btn-primary" onClick={() => onNext(selectedInstalled)}>
-          {selectedInstalled ? 'Continue' : 'Download and Install'}
+          {selectedInstalled ? 'Continue' : 'Download Model'}
         </button>
       </div>
     </>
   )
 }
 
-// ─── Step 3: Install / Skip ────────────────────────────────────────────────────
-function StepInstall({ modelId, alreadyInstalled, onNext }) {
-  const [log, setLog]           = useState([])
-  const [done, setDone]         = useState(alreadyInstalled)
-  const [failed, setFailed]     = useState(false)
-  const [progress, setProgress] = useState(alreadyInstalled ? 100 : 0)
-
-  useEffect(() => {
-    if (alreadyInstalled) {
-      setLog([`Model ${modelId} is already installed.`])
-      return
-    }
-
-    // Check once more if model is already present before pulling
-    fetchOllamaModels().then(async (models) => {
-      if (modelIsInstalled(modelId, models)) {
-        setLog([`Model ${modelId} is already installed. Skipping download.`])
-        setProgress(100)
-        setDone(true)
-        return
-      }
-
-      // Proceed with pull
-      const unsubscribe = window.acm.onPullProgress((data) => {
-        if (data.status === 'progress' && data.raw) {
-          setLog((prev) => [...prev.slice(-60), data.raw])
-          const match = data.raw.match(/(\d+)%/)
-          if (match) setProgress(parseInt(match[1], 10))
-        }
-      })
-
-      const result = await window.acm.pullModel(modelId)
-      unsubscribe()
-
-      if (result.success) {
-        setProgress(100)
-        setLog((prev) => [...prev, `Model ${modelId} ready.`])
-        setDone(true)
-      } else {
-        // If pull "failed" but model exists, treat as success
-        const modelsAfter = await fetchOllamaModels()
-        if (modelIsInstalled(modelId, modelsAfter)) {
-          setProgress(100)
-          setLog((prev) => [...prev, `Model ${modelId} confirmed present.`])
-          setDone(true)
-        } else {
-          setLog((prev) => [...prev, `Error: ${result.error}`])
-          setFailed(true)
-        }
-      }
-    })
-  }, [modelId, alreadyInstalled])
-
+// ─── Step 3: Cloud API Config ──────────────────────────────────────────────────
+function StepCloudConfig({ onNext, onBack, config, setConfig }) {
   return (
     <>
       <div className="wizard-panel-header">
-        <div className="wizard-step-indicator">Step 3 of 4</div>
-        <div className="wizard-panel-title">
-          {alreadyInstalled ? 'Verified' : 'Installing'}
-        </div>
+        <div className="wizard-step-indicator">Cloud Engine Setup</div>
+        <div className="wizard-panel-title">Configure API Provider</div>
         <div className="wizard-panel-desc">
-          {alreadyInstalled
-            ? `${modelId} is already installed and ready.`
-            : `Downloading ${modelId}. This may take several minutes.`}
+          Connect directly to a commercial AI model. Keys are stored locally in an encrypted vault.
         </div>
       </div>
 
-      <div className="wizard-panel-body">
+      <div className="wizard-panel-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div>
-          <div className="flex justify-between mb-2">
-            <span className="text-sm text-muted">
-              {done ? 'Complete' : 'Download progress'}
-            </span>
-            <span className="text-mono text-xs text-muted">{progress}%</span>
-          </div>
-          <div className="progress-track">
-            <div
-              className={`progress-fill ${done ? 'safe' : ''}`}
-              style={{ width: `${progress}%` }}
-            />
+          <label style={{ display: 'block', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>
+            Provider
+          </label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {CLOUD_PROVIDERS.map(p => (
+              <button
+                key={p.id}
+                onClick={() => setConfig({ ...config, provider: p.id, model: p.defaultModel })}
+                className={`btn ${config.provider === p.id ? 'btn-primary' : 'btn-ghost'}`}
+                style={{ flex: 1 }}
+              >
+                {p.name}
+              </button>
+            ))}
           </div>
         </div>
 
-        <div className="stream-feed" style={{ maxHeight: 140 }}>
-          {log.length === 0
-            ? <span className="stream-line">Checking model status...</span>
-            : log.map((line, i) => (
-                <span key={i} className={`stream-line ${done && i === log.length - 1 ? 'success' : ''}`}>
-                  {line}
-                </span>
-              ))
-          }
+        <div>
+          <label style={{ display: 'block', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>
+            Model
+          </label>
+          <input 
+            type="text" 
+            className="input-field" 
+            value={config.model}
+            onChange={(e) => setConfig({ ...config, model: e.target.value })}
+            style={{ width: '100%', fontFamily: 'var(--font-mono)' }}
+          />
         </div>
 
-        {failed && (
-          <div style={{
-            background: 'var(--critical-dim)', border: '1px solid var(--critical-border)',
-            borderRadius: 'var(--radius-md)', padding: 'var(--space-3)', fontSize: 12, color: 'var(--critical)',
-          }}>
-            Pull failed. If the model is already downloaded, you can click Continue.<br />
-            To pull manually:{' '}
-            <code style={{ fontFamily: 'var(--font-mono)' }}>ollama pull {modelId}</code>
-          </div>
-        )}
+        <div>
+          <label style={{ display: 'block', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>
+            API Key
+          </label>
+          <input 
+            type="password" 
+            className="input-field" 
+            value={config.apiKey}
+            onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
+            placeholder="sk-..."
+            style={{ width: '100%', fontFamily: 'var(--font-mono)' }}
+          />
+        </div>
       </div>
 
       <div className="wizard-panel-footer">
-        <span />
-        <button
-          className="btn btn-primary"
-          disabled={!done && !failed}
-          onClick={onNext}
-        >
-          Continue
+        <button className="btn btn-ghost" onClick={onBack}>Back</button>
+        <button className="btn btn-primary" disabled={!config.apiKey} onClick={onNext}>
+          Save & Continue
         </button>
       </div>
     </>
@@ -401,118 +331,112 @@ function StepInstall({ modelId, alreadyInstalled, onNext }) {
 }
 
 // ─── Step 4: Ready ─────────────────────────────────────────────────────────────
-function StepReady({ modelId, onLaunch }) {
+function StepReady({ mode, localModel, cloudConfig, onLaunch }) {
+  const [saving, setSaving] = useState(false)
+
+  const handleLaunch = async () => {
+    setSaving(true)
+    const payload = mode === 'local' 
+      ? { provider: 'ollama', model: localModel, api_key: '' }
+      : { provider: cloudConfig.provider, model: cloudConfig.model, api_key: cloudConfig.apiKey }
+
+    try {
+      await fetch('http://127.0.0.1:8000/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+    } catch (e) {
+      console.warn("Failed to save config, proceeding anyway.", e)
+    }
+    
+    onLaunch()
+  }
+
   return (
     <>
       <div className="wizard-panel-header">
-        <div className="wizard-step-indicator">Step 4 of 4</div>
+        <div className="wizard-step-indicator">Final Step</div>
         <div className="wizard-panel-title">Ready</div>
-        <div className="wizard-panel-desc">
-          Attack Chain Mapper is configured and ready to use.
-        </div>
+        <div className="wizard-panel-desc">Attack Chain Mapper is configured and ready.</div>
       </div>
 
       <div className="wizard-panel-body">
-        {[
-          { label: 'AI Model',      value: modelId },
-          { label: 'Inference',     value: 'Local — Ollama' },
-          { label: 'Encryption',    value: 'AES-256-GCM session vault' },
-          { label: 'Network',       value: 'No external connections required' },
-          { label: 'Data stored',   value: 'Memory only — cleared on close' },
-        ].map(({ label, value }) => (
-          <div className="check-row" key={label}>
-            <div className="check-row-label">{label}</div>
-            <div className="flex items-center gap-2">
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)' }}>
-                {value}
-              </span>
-              <span className="check-row-status pass">Pass</span>
-            </div>
-          </div>
-        ))}
+        {mode === 'local' ? (
+          <>
+            <div className="check-row"><div className="check-row-label">Engine</div><div className="text-mono text-xs text-muted">Local (Ollama)</div></div>
+            <div className="check-row"><div className="check-row-label">Model</div><div className="text-mono text-xs text-muted">{localModel}</div></div>
+            <div className="check-row"><div className="check-row-label">Privacy</div><div className="text-mono text-xs" style={{color:'var(--safe)'}}>Zero Egress</div></div>
+          </>
+        ) : (
+          <>
+            <div className="check-row"><div className="check-row-label">Engine</div><div className="text-mono text-xs text-muted">Cloud API</div></div>
+            <div className="check-row"><div className="check-row-label">Provider</div><div className="text-mono text-xs text-muted">{cloudConfig.provider}</div></div>
+            <div className="check-row"><div className="check-row-label">Model</div><div className="text-mono text-xs text-muted">{cloudConfig.model}</div></div>
+          </>
+        )}
       </div>
 
       <div className="wizard-panel-footer">
         <span />
-        <button className="btn btn-primary btn-lg" onClick={onLaunch}>
-          Launch Attack Chain Mapper
+        <button className="btn btn-primary btn-lg" disabled={saving} onClick={handleLaunch}>
+          {saving ? 'Saving...' : 'Launch Application'}
         </button>
       </div>
     </>
   )
 }
 
-// ─── Wizard Orchestrator ───────────────────────────────────────────────────────
+// ─── Main Wizard ───────────────────────────────────────────────────────────────
 export default function Installer({ onComplete }) {
-  const [step, setStep]                     = useState(0)
-  const [selectedModel, setSelectedModel]   = useState('qwen2.5-coder:3b')
-  const [modelAlreadyInstalled, setModelAlreadyInstalled] = useState(false)
-
-  const handleModelNext = (alreadyInstalled) => {
-    setModelAlreadyInstalled(alreadyInstalled)
-    setStep(2)
-  }
-
-  // Auto-detect if first-run is truly needed — if all models already installed, start at step 1
-  useEffect(() => {
-    fetchOllamaModels().then((models) => {
-      if (models.length > 0) {
-        setSelectedModel(models[0])
-      }
-    })
-  }, [])
+  const [step, setStep] = useState('welcome') // welcome, local_check, local_model, cloud_config, ready
+  const [mode, setMode] = useState(null) // 'local' | 'cloud'
+  
+  const [localModel, setLocalModel] = useState('qwen2.5-coder:3b')
+  const [cloudConfig, setCloudConfig] = useState({ provider: 'claude', model: 'claude-3-5-haiku-20241022', apiKey: '' })
 
   return (
     <div className="wizard-shell">
       <div className="titlebar">
         <span className="titlebar-wordmark">Attack Chain Mapper — Setup</span>
-        <div className="titlebar-status">
-          <span className="text-mono" style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
-            {STEPS[step]}
-          </span>
-        </div>
       </div>
 
       <div className="wizard-body">
         <div className="wizard-panel">
-          {step === 0 && (
-            <StepSystemCheck onNext={() => setStep(1)} />
-          )}
-          {step === 1 && (
-            <StepModelSelect
-              onNext={handleModelNext}
-              onBack={() => setStep(0)}
-              selected={selectedModel}
-              setSelected={setSelectedModel}
+          {step === 'welcome' && (
+            <StepWelcome 
+              onSelectMode={(m) => {
+                setMode(m)
+                setStep(m === 'local' ? 'local_check' : 'cloud_config')
+              }} 
             />
           )}
-          {step === 2 && (
-            <StepInstall
-              modelId={selectedModel}
-              alreadyInstalled={modelAlreadyInstalled}
-              onNext={() => setStep(3)}
+          {step === 'local_check' && (
+            <StepLocalCheck 
+              onBack={() => setStep('welcome')}
+              onNext={() => setStep('local_model')} 
             />
           )}
-          {step === 3 && (
-            <StepReady modelId={selectedModel} onLaunch={onComplete} />
+          {step === 'local_model' && (
+            <StepLocalModel 
+              selected={localModel} setSelected={setLocalModel}
+              onBack={() => setStep('local_check')}
+              onNext={() => setStep('ready')} 
+            />
           )}
-        </div>
-      </div>
-
-      <div style={{
-        padding: 'var(--space-4) var(--space-8)',
-        borderTop: '1px solid var(--surface-border)',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      }}>
-        <span className="text-mono text-xs text-muted">MIT License — Navaneethan P</span>
-        <div className="flex gap-2">
-          {STEPS.map((s, i) => (
-            <div key={s} style={{
-              width: 24, height: 3, borderRadius: 99,
-              background: i <= step ? 'var(--accent)' : 'var(--surface-border)',
-              transition: 'background 200ms',
-            }} />
-          ))}
+          {step === 'cloud_config' && (
+            <StepCloudConfig 
+              config={cloudConfig} setConfig={setCloudConfig}
+              onBack={() => setStep('welcome')}
+              onNext={() => setStep('ready')} 
+            />
+          )}
+          {step === 'ready' && (
+            <StepReady 
+              mode={mode} localModel={localModel} cloudConfig={cloudConfig} 
+              onLaunch={onComplete} 
+            />
+          )}
         </div>
       </div>
     </div>

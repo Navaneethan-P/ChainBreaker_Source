@@ -1,80 +1,58 @@
-# 🛡️ Attack Chain Mapper
+<div align="center">
+  <img src="https://img.shields.io/badge/Status-Active-success.svg" />
+  <img src="https://img.shields.io/badge/License-MIT-blue.svg" />
+</div>
 
-**Attack Chain Mapper** is a next-generation, local-first security tool that maps standalone vulnerabilities (like CVEs and Supply Chain Risks) into realistic, multi-step attack chains. Powered by local LLMs, it provides context-aware threat modeling without ever sending your sensitive codebase data to the cloud.
+<h1 align="center">Attack Chain Mapper</h1>
 
----
-
-## 🌟 Key Features
-- **Local AI Analysis**: Uses `Ollama` running entirely on your machine. Your code never leaves your device.
-- **MITRE ATT&CK Mapping**: Automatically maps theoretical attacks to recognized MITRE tactics (e.g., *Initial Access*, *Persistence*, *Exfiltration*).
-- **Supply Chain Risk Scoring**: Looks beyond CVEs to identify missing lockfiles, unpinned dependencies, and risky npm install scripts.
-- **Fix-It AI Assistant**: An interactive chat panel that helps you remediate vulnerabilities and patch attack vectors in real-time.
-
----
-
-## 🚀 Installation & Usage (End Users)
-
-The easiest way to run Attack Chain Mapper is by using the standalone Windows installer.
-
-### Prerequisites (Important!)
-Because this tool relies on local AI inference and Python-based analysis, you must have the following installed on your system before running:
-1. **[Python 3.10+](https://www.python.org/downloads/)**: Ensure you check the box that says "Add Python to PATH" during installation.
-2. **[Ollama](https://ollama.com/)**: Download and install Ollama for local LLM support.
-   - After installing, open a terminal and run: `ollama run llama3` to download the required AI model.
-
-### Running the App
-1. Navigate to the `desktop/dist-app/` directory (or download from the latest GitHub Release).
-2. Run `Attack Chain Mapper Setup 1.0.0.exe`.
-3. The app will install and create a desktop shortcut.
-4. On the first launch, it will verify your environment (Python, Ollama) and automatically pull down required scanning tools (Semgrep, pip-audit).
+<p align="center">
+  <strong>Autonomous Security Sentinel & Historical Breach Engine</strong><br/>
+  <i>Visualize, map, and remediate attack chains before they are exploited.</i>
+</p>
 
 ---
 
-## 🛠️ Developer Setup (Building from Source)
+## 🛡️ What is Attack Chain Mapper?
 
-If you want to contribute or build the application from source, follow these steps:
+Attack Chain Mapper is an autonomous desktop application that scans your repositories for vulnerabilities, maps their data flows, and uses AI to reason exactly how an attacker would chain them together. 
 
-### Prerequisites
-- Node.js (v18+)
-- Python 3.10+
-- Ollama (running locally with the `llama3` model)
+Instead of overwhelming you with a list of isolated warnings, it builds a **Cyber Command Graph** showing the exact blast radius and path of attack.
 
-### 1. Backend Setup
-1. Open a terminal in the `backend/` directory.
-2. Create a virtual environment (optional but recommended): `python -m venv venv`
-3. Activate the environment:
-   - Windows: `.\venv\Scripts\activate`
-   - Mac/Linux: `source venv/bin/activate`
-4. Install requirements: `pip install -r requirements.txt`
-5. Start the backend: `uvicorn main:app --port 8000 --reload`
-
-### 2. Frontend Setup
-1. Open a new terminal in the `desktop/` directory.
-2. Install dependencies: `npm install`
-3. Start the dev server and Electron shell concurrently: `npm run dev`
-
-### 3. Packaging
-To build the `.exe` installer yourself:
-```bash
-cd desktop
-npm run build:win
-```
-The output installer will be generated in `desktop/dist-app/`.
+### Core Features
+- **Historical Breach Engine**: Correlates your attack chains against real-world catastrophic breaches (SolarWinds, Equifax, Log4Shell, Capital One).
+- **Cyber Command Graph**: Deep-space dark theme with animated pulsing attack paths and blinking red halos on vulnerable nodes.
+- **Supply Chain Risk Detection**: Automatically flags unpinned dependencies, missing lockfiles, and dangerous install scripts.
+- **MITRE ATT&CK Mapping**: Every step in the attack chain is mapped to a real MITRE tactic.
+- **Fix-It AI**: Interactive chat side-panel allowing you to converse with the AI to fix specific vulnerabilities.
+- **Flexible AI Inference**: Run 100% locally with zero data egress (Ollama), or connect to high-performance Cloud APIs (Claude, Gemini, OpenAI).
 
 ---
 
-## ⚠️ Troubleshooting
+## 🚀 Installation (Windows)
 
-**Q: The app opens but I get a "Connection Refused" error for the backend.**
-A: Ensure your local Python environment is correctly set up. If running from source, make sure `uvicorn` is running on port `8000`.
+Attack Chain Mapper is distributed as a compiled executable. 
 
-**Q: The AI takes forever to generate attack chains, or fails entirely.**
-A: This usually means Ollama is not running in the background, or you haven't pulled the `llama3` model. Open a terminal and run `ollama serve` and/or `ollama run llama3`.
+1. **Download the Installer**  
+   Go to the [Releases](https://github.com/Navaneethan-P/Forge/releases) page and download `Attack Chain Mapper Setup X.X.X.exe`.
 
-**Q: The scanner hangs on Python projects.**
-A: Attack Chain Mapper uses `pip-audit`. Ensure you have an active internet connection so the tool can query PyPI for vulnerability data.
+2. **Run the Installer**  
+   Double-click the `.exe` to install the application.
+
+3. **Complete the AI Setup Wizard**  
+   On first launch, the application will guide you through setting up the AI engine. You can choose:
+   - **Private Local AI (Recommended)**: The application provides a one-click PowerShell script to automatically install Ollama and the required AI model to your machine.
+   - **Cloud API (High Performance)**: If you prefer, simply enter an API key for Anthropic Claude, Google Gemini, or OpenAI GPT.
 
 ---
 
-## 📜 License
-MIT License. See `LICENSE` for more information.
+## 🔒 Privacy & Security
+
+If you choose the **Private Local AI** mode, Attack Chain Mapper runs completely offline. Your source code and vulnerabilities are analyzed entirely on your own machine. No data is ever transmitted externally.
+
+If you choose a **Cloud API**, your source code and vulnerability data are sent to the provider you select using the API key you provide. Your API keys are encrypted locally using an AES-256-GCM vault and are never stored in plaintext.
+
+---
+
+## 📄 License
+
+This software is provided for free use under the MIT License.

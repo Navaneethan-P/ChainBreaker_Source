@@ -70,8 +70,15 @@ _sse_queues: dict[int, asyncio.Queue] = {}
 
 class AnalyzeRequest(BaseModel):
     repo_url: str
-    model: str | None = None            # override default Ollama model
-    openrouter_key: str | None = None   # optional user-supplied key, never stored
+    model: str | None = None
+    provider: str | None = None
+    api_key: str | None = None
+
+
+class ConfigRequest(BaseModel):
+    provider: str
+    model: str | None = None
+    api_key: str | None = None
 
 
 # ─── Health ────────────────────────────────────────────────────────────────────
@@ -116,7 +123,8 @@ async def start_analysis(req: AnalyzeRequest):
             repo_url=url,
             queue=queue,
             model_override=req.model,
-            openrouter_key=req.openrouter_key,
+            provider=req.provider,
+            api_key=req.api_key,
         )
     )
 
@@ -311,6 +319,46 @@ async def clone_status(run_id: int):
         }
 
 
+
+
+@app.post("/api/config", tags=["config"])
+async def save_config(req: ConfigRequest):
+    """
+    Save the AI provider configuration to the local .env file.
+    This persists the user's choice from the Installer wizard.
+    """
+    env_path = Path(__file__).parent / ".env"
+    
+    # Read existing
+    env_vars = {}
+    if env_path.exists():
+        with open(env_path, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    env_vars[k.strip()] = v.strip()
+                    
+    # Update
+    env_vars["AI_PROVIDER"] = req.provider
+    if req.model:
+        env_vars["AI_MODEL"] = req.model
+    if req.api_key is not None:
+        env_vars["AI_API_KEY"] = req.api_key
+        
+    # Write back
+    with open(env_path, "w") as f:
+        for k, v in env_vars.items():
+            f.write(f"{k}={v}\n")
+            
+    # Update current process
+    os.environ["AI_PROVIDER"] = req.provider
+    if req.model:
+        os.environ["AI_MODEL"] = req.model
+    if req.api_key is not None:
+        os.environ["AI_API_KEY"] = req.api_key
+        
+    return {"status": "ok", "provider": req.provider}
 
 
 # ─── Ollama proxy (model list for UI) ─────────────────────────────────────────

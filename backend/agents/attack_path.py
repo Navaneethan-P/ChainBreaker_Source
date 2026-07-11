@@ -31,7 +31,8 @@ async def reason_attack_paths(
     graph: dict,
     queue: asyncio.Queue,
     model_override: str | None = None,
-    openrouter_key: str | None = None,
+    provider: str | None = None,
+    api_key: str | None = None,
 ) -> list[dict]:
     """
     Reason about attack chains using the LLM router.
@@ -50,7 +51,8 @@ async def reason_attack_paths(
     raw_chains = await _call_model_with_retry(
         prompt, run_id, queue,
         model=model_override,
-        openrouter_key=openrouter_key,
+        provider=provider,
+        api_key=api_key,
     )
 
     if not raw_chains:
@@ -81,7 +83,8 @@ async def reason_attack_paths(
             refined = await _refine_chain(
                 chain, findings, graph, run_id, queue,
                 model=model_override,
-                openrouter_key=openrouter_key,
+                provider=provider,
+                api_key=api_key,
             )
             if refined:
                 final_chains.append(refined)
@@ -178,7 +181,8 @@ async def _call_model_with_retry(
     run_id: int,
     queue: asyncio.Queue,
     model: str | None = None,
-    openrouter_key: str | None = None,
+    provider: str | None = None,
+    api_key: str | None = None,
     attempt: int = 0,
 ) -> list[dict]:
     """Call the LLM router and parse JSON response. Retries on malformed output."""
@@ -186,7 +190,8 @@ async def _call_model_with_retry(
         raw_text = await generate(
             prompt=prompt,
             model=model,
-            openrouter_key=openrouter_key,
+            provider=provider,
+            api_key=api_key,
             temperature=0.2,
             max_tokens=2000,
         )
@@ -213,7 +218,7 @@ async def _call_model_with_retry(
                 "Return ONLY raw JSON starting with { — no text before or after."
             )
             return await _call_model_with_retry(
-                retry_prompt, run_id, queue, model, openrouter_key, attempt + 1
+                retry_prompt, run_id, queue, model, provider, api_key, attempt + 1
             )
         return []
 
@@ -243,7 +248,8 @@ async def _refine_chain(
     run_id: int,
     queue: asyncio.Queue,
     model: str | None = None,
-    openrouter_key: str | None = None,
+    provider: str | None = None,
+    api_key: str | None = None,
 ) -> dict | None:
     """Re-examine a low-confidence chain with a narrower, focused prompt."""
     title = chain.get("title", "unknown")
@@ -276,7 +282,7 @@ Respond with ONLY valid JSON:
 }}"""
 
     refined_list = await _call_model_with_retry(
-        refine_prompt, run_id, queue, model, openrouter_key
+        refine_prompt, run_id, queue, model, provider, api_key
     )
     if refined_list:
         return refined_list[0] if isinstance(refined_list, list) else refined_list
