@@ -40,6 +40,9 @@ export default function App() {
         <Route path="/analyze"   element={<Analyzer />} />
         <Route path="/results/:runId" element={<Results />} />
         <Route path="/history"   element={<History />} />
+        <Route path="/setup"     element={
+          <Installer onComplete={() => window.location.href = '/'} />
+        } />
         <Route path="*"          element={<Navigate to="/" replace />} />
       </Routes>
     </Shell>

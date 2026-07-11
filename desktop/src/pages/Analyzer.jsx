@@ -25,6 +25,7 @@ export default function Analyzer() {
   const [localPath, setLocalPath] = useState('')
   const [archivePath, setArchivePath] = useState('')
   const [models, setModels]       = useState([])
+  const [engineConfig, setEngineConfig] = useState({ provider: 'ollama', model: 'unknown' })
   const [selectedModel, setSelectedModel] = useState('')
   const [dragging, setDragging]   = useState(false)
   const [error, setError]         = useState('')
@@ -32,11 +33,25 @@ export default function Analyzer() {
   const dropRef = useRef(null)
 
   useEffect(() => {
-    window.acm.checkOllama().then((info) => {
-      const names = (info.models || []).map(m => m.name)
-      setModels(names)
-      if (names.length > 0) setSelectedModel(names[0])
-    })
+    const fetchInfo = async () => {
+      try {
+        const confRes = await fetch(`${BACKEND}/api/config/status`)
+        const conf = await confRes.json()
+        setEngineConfig(conf)
+        
+        if (conf.provider === 'ollama') {
+          const info = await window.acm.checkOllama()
+          const names = (info.models || []).map(m => m.name)
+          setModels(names)
+          if (names.length > 0) setSelectedModel(names[0])
+        } else {
+          setSelectedModel(conf.model)
+        }
+      } catch (e) {
+        console.warn(e)
+      }
+    }
+    fetchInfo()
   }, [])
 
   const handlePickFolder = async () => {
@@ -65,7 +80,7 @@ export default function Analyzer() {
     }
     if (mode === 'local' && !localPath) return 'Select a local repository folder.'
     if (mode === 'upload' && !archivePath) return 'Select an archive file (.zip, .tar.gz).'
-    if (!selectedModel) return 'No Ollama model is available. Ensure Ollama is running with at least one model.'
+    if (engineConfig.provider === 'ollama' && !selectedModel) return 'No Ollama model is available. Ensure Ollama is running.'
     return ''
   }
 
@@ -184,11 +199,18 @@ export default function Analyzer() {
       {/* Model selector */}
       <div className="card mb-6">
         <div className="card-header" style={{ marginBottom: 'var(--space-4)' }}>
-          <div className="card-title">AI Model</div>
-          <div className="card-subtitle">Local Ollama inference</div>
+          <div className="card-title">AI Engine</div>
+          <div className="card-subtitle" style={{ textTransform: 'capitalize' }}>
+            {engineConfig.provider === 'ollama' ? 'Local Ollama Inference' : `Cloud API (${engineConfig.provider})`}
+          </div>
         </div>
 
-        {models.length === 0 ? (
+        {engineConfig.provider !== 'ollama' ? (
+          <div className="form-group">
+            <label className="form-label">Configured Model</label>
+            <input className="form-input text-mono" value={engineConfig.model} readOnly disabled />
+          </div>
+        ) : models.length === 0 ? (
           <div style={{
             padding: 'var(--space-3) var(--space-4)',
             background: 'var(--critical-dim)',
@@ -201,9 +223,9 @@ export default function Analyzer() {
           </div>
         ) : (
           <div className="form-group">
-            <label className="form-label">Select model for this run</label>
+            <label className="form-label">Select local model for this run</label>
             <select
-              className="form-input form-select"
+              className="form-input form-select text-mono"
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
             >

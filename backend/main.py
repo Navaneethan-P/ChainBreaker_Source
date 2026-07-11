@@ -361,6 +361,14 @@ async def save_config(req: ConfigRequest):
     return {"status": "ok", "provider": req.provider}
 
 
+@app.get("/api/config/status", tags=["config"])
+async def get_config_status():
+    """Return the currently configured AI provider."""
+    provider = os.getenv("AI_PROVIDER", "ollama")
+    model = os.getenv("AI_MODEL", "qwen2.5-coder:3b" if provider == "ollama" else "")
+    return {"provider": provider, "model": model}
+
+
 # ─── Ollama proxy (model list for UI) ─────────────────────────────────────────
 
 @app.get("/api/models", tags=["inference"])

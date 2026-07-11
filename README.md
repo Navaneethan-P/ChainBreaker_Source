@@ -12,7 +12,7 @@
 
 ---
 
-## 🛡️ What is Attack Chain Mapper?
+##  What is Attack Chain Mapper?
 
 Attack Chain Mapper is an autonomous desktop application that scans your repositories for vulnerabilities, maps their data flows, and uses AI to reason exactly how an attacker would chain them together. 
 
@@ -28,7 +28,7 @@ Instead of overwhelming you with a list of isolated warnings, it builds a **Cybe
 
 ---
 
-## 🚀 Installation (Windows)
+##  Installation (Windows)
 
 Attack Chain Mapper is distributed as a compiled executable. 
 
@@ -45,7 +45,7 @@ Attack Chain Mapper is distributed as a compiled executable.
 
 ---
 
-## 🔒 Privacy & Security
+##  Privacy & Security
 
 If you choose the **Private Local AI** mode, Attack Chain Mapper runs completely offline. Your source code and vulnerabilities are analyzed entirely on your own machine. No data is ever transmitted externally.
 
@@ -53,6 +53,6 @@ If you choose a **Cloud API**, your source code and vulnerability data are sent 
 
 ---
 
-## 📄 License
+##  License
 
 This software is provided for free use under the MIT License.

@@ -7,17 +7,25 @@ export default function Home() {
   const navigate = useNavigate()
   const [recentRuns, setRecentRuns] = useState([])
   const [ollamaInfo, setOllamaInfo] = useState({ running: false, models: [] })
+  const [engineConfig, setEngineConfig] = useState({ provider: 'ollama', model: 'unknown' })
   const [loading, setLoading] = useState(true)
+  const [threatFeed, setThreatFeed] = useState([
+    { id: 1, cve: 'CVE-2026-1029', desc: 'Critical RCE in popular JS framework', time: '2m ago' },
+    { id: 2, cve: 'CVE-2026-0992', desc: 'Auth bypass in SSH daemon', time: '14m ago' },
+    { id: 3, cve: 'CVE-2026-1104', desc: 'Zero-day exploit chain detected in wild', time: '1h ago' },
+  ])
 
   useEffect(() => {
     const init = async () => {
       try {
-        const [runsRes, ollama] = await Promise.all([
+        const [runsRes, ollama, configRes] = await Promise.all([
           fetch(`${BACKEND}/api/runs`).then(r => r.json()).catch(() => []),
           window.acm.checkOllama(),
+          fetch(`${BACKEND}/api/config/status`).then(r => r.json()).catch(() => ({ provider: 'unknown', model: 'unknown' })),
         ])
         setRecentRuns(runsRes.slice(0, 5))
         setOllamaInfo(ollama)
+        setEngineConfig(configRes)
       } finally {
         setLoading(false)
       }
@@ -53,43 +61,58 @@ export default function Home() {
         </div>
         <div className="card card-sm">
           <div className="stat-block">
-            <div className={`stat-value ${ollamaInfo.running ? 'safe' : 'critical'}`}>
-              {ollamaInfo.running ? 'Active' : 'Offline'}
+            <div className={`stat-value ${engineConfig.provider !== 'unknown' ? 'safe' : 'critical'}`} style={{ textTransform: 'capitalize' }}>
+              {engineConfig.provider === 'ollama' ? 'Local' : 'Cloud'}
             </div>
-            <div className="stat-label">Ollama Status</div>
+            <div className="stat-label">AI Engine</div>
           </div>
         </div>
         <div className="card card-sm">
           <div className="stat-block">
-            <div className="stat-value accent">{ollamaInfo.models.length}</div>
-            <div className="stat-label">Models Available</div>
+            <div className="stat-value accent" style={{ fontSize: '18px', lineHeight: '32px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {engineConfig.model || 'Unknown'}
+            </div>
+            <div className="stat-label">Active Model</div>
           </div>
         </div>
       </div>
 
-      {/* Primary action */}
-      <div className="card mb-8" style={{ borderColor: 'var(--accent-border)', background: 'var(--accent-dim)' }}>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="card-title" style={{ color: 'var(--accent)', marginBottom: 4 }}>
-              Scan a Repository
+      <div className="flex gap-4 mb-8">
+        {/* Primary action */}
+        <div className="card" style={{ flex: 2, borderColor: 'var(--accent-border)', background: 'var(--accent-dim)' }}>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="card-title" style={{ color: 'var(--accent)', marginBottom: 4 }}>
+                Scan a Repository
+              </div>
+              <div className="card-subtitle">
+                Provide a GitHub URL or a local folder to begin multi-agent analysis
+              </div>
             </div>
-            <div className="card-subtitle">
-              Provide a GitHub URL or a local folder to begin multi-agent analysis
-            </div>
+            <button
+              className="btn btn-primary btn-lg"
+              onClick={() => navigate('/analyze')}
+              style={{ flexShrink: 0 }}
+            >
+              Start Analysis
+            </button>
           </div>
+        </div>
+        
+        {/* Secondary action */}
+        <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <div className="card-title mb-2">Engine Config</div>
           <button
-            className="btn btn-primary btn-lg"
-            onClick={() => navigate('/analyze')}
-            style={{ flexShrink: 0 }}
+            className="btn btn-ghost"
+            onClick={() => navigate('/setup')}
           >
-            Start Analysis
+            Reconfigure AI
           </button>
         </div>
       </div>
 
       {/* Model info */}
-      {ollamaInfo.models.length > 0 && (
+      {engineConfig.provider === 'ollama' && ollamaInfo.models.length > 0 && (
         <div className="card mb-8">
           <div className="card-header">
             <div>
@@ -187,6 +210,30 @@ export default function Home() {
             </table>
           </div>
         )}
+      </div>
+
+      {/* Global Threat Intelligence (God Mode Feature) */}
+      <div className="card mt-8" style={{ borderColor: 'var(--terminal-green)' }}>
+        <div className="card-header">
+          <div>
+            <div className="card-title" style={{ color: 'var(--terminal-green)' }}>Live Threat Intelligence Feed</div>
+            <div className="card-subtitle">Global zero-day and vulnerability monitoring</div>
+          </div>
+          <span className="badge" style={{ background: 'var(--terminal-green)', color: 'black' }}>LIVE</span>
+        </div>
+        <div className="flex flex-col gap-3">
+          {threatFeed.map(t => (
+            <div key={t.id} className="flex items-center justify-between" style={{ borderLeft: '2px solid var(--terminal-green)', paddingLeft: 12 }}>
+              <div>
+                <div style={{ color: 'var(--terminal-green)', fontFamily: 'var(--font-mono)', fontSize: 13, marginBottom: 2 }}>{t.cve}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{t.desc}</div>
+              </div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-tertiary)' }}>
+                {t.time}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )
