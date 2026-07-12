@@ -1,58 +1,93 @@
 <div align="center">
-  <img src="https://img.shields.io/badge/Status-Active-success.svg" />
-  <img src="https://img.shields.io/badge/License-MIT-blue.svg" />
+  <img src="logo.png" alt="ChainBreaker Logo" width="200" />
 </div>
 
-<h1 align="center">Attack Chain Mapper</h1>
+# ChainBreaker
 
-<p align="center">
-  <strong>Autonomous Security Sentinel & Historical Breach Engine</strong><br/>
-  <i>Visualize, map, and remediate attack chains before they are exploited.</i>
-</p>
+ChainBreaker is an autonomous security sentinel designed to map how isolated vulnerabilities chain together into functional attack paths. By leveraging a local, encrypted, and open-source architecture, ChainBreaker provides security teams with deep visibility into exploitable attack chains without compromising source code privacy.
 
----
+## Overview
 
-##  What is Attack Chain Mapper?
+Modern software ecosystems are highly interconnected. A low-severity vulnerability in an underlying module can easily escalate into a critical breach when chained with other seemingly benign configuration flaws. ChainBreaker utilizes advanced static analysis and AI-driven reasoning to automatically construct and validate these attack chains, presenting them in an interactive, visual graph.
 
-Attack Chain Mapper is an autonomous desktop application that scans your repositories for vulnerabilities, maps their data flows, and uses AI to reason exactly how an attacker would chain them together. 
+### Key Capabilities
 
-Instead of overwhelming you with a list of isolated warnings, it builds a **Cyber Command Graph** showing the exact blast radius and path of attack.
+* **Automated Chain Construction**: Correlates findings from Semgrep, Bandit, pip-audit, and other SAST tools to form multi-step attack vectors.
+* **Executive Risk Profiling**: Calculates financial risk exposure based on the Factor Analysis of Information Risk (FAIR) model and flags compliance violations (e.g., SOC2, ISO27001).
+* **Automated Remediation**: Integrates with local or cloud-based LLM engines to generate precise, unified diff patches for identified vulnerabilities.
+* **Attack Graph Visualization**: Provides an interactive, force-directed graph to visually trace compromised nodes and high-value target assets (Loot).
 
-### Core Features
-- **Historical Breach Engine**: Correlates your attack chains against real-world catastrophic breaches (SolarWinds, Equifax, Log4Shell, Capital One).
-- **Cyber Command Graph**: Deep-space dark theme with animated pulsing attack paths and blinking red halos on vulnerable nodes.
-- **Supply Chain Risk Detection**: Automatically flags unpinned dependencies, missing lockfiles, and dangerous install scripts.
-- **MITRE ATT&CK Mapping**: Every step in the attack chain is mapped to a real MITRE tactic.
-- **Fix-It AI**: Interactive chat side-panel allowing you to converse with the AI to fix specific vulnerabilities.
-- **Flexible AI Inference**: Run 100% locally with zero data egress (Ollama), or connect to high-performance Cloud APIs (Claude, Gemini, OpenAI).
+## Setup and Installation
 
----
+### Prerequisites
 
-##  Installation (Windows)
+* Python 3.10 or higher
+* Node.js 18 or higher
+* (Optional) Ollama for local, air-gapped AI reasoning
 
-Attack Chain Mapper is distributed as a compiled executable. 
+### Backend Setup
 
-1. **Download the Installer**  
-   Go to the [Releases](https://github.com/Navaneethan-P/Attack_Chain_Mapper/releases) page and download `Attack Chain Mapper Setup X.X.X.exe`.
+1. Navigate to the backend directory:
+   ```bash
+   cd backend
+   ```
+2. Create and activate a virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows use: venv\Scripts\activate
+   ```
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Start the backend server:
+   ```bash
+   python main.py
+   ```
 
-2. **Run the Installer**  
-   Double-click the `.exe` to install the application.
+### Frontend Setup
 
-3. **Complete the AI Setup Wizard**  
-   On first launch, the application will guide you through setting up the AI engine. You can choose:
-   - **Private Local AI (Recommended)**: The application provides a one-click PowerShell script to automatically install Ollama and the required AI model to your machine.
-   - **Cloud API (High Performance)**: If you prefer, simply enter an API key for Anthropic Claude, Google Gemini, or OpenAI GPT.
+1. Navigate to the desktop directory:
+   ```bash
+   cd desktop
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Start the development server:
+   ```bash
+   npm run dev:vite
+   ```
 
----
+## Production Build
 
-##  Privacy & Security
+To build the frontend for production deployment:
 
-If you choose the **Private Local AI** mode, Attack Chain Mapper runs completely offline. Your source code and vulnerabilities are analyzed entirely on your own machine. No data is ever transmitted externally.
+```bash
+cd desktop
+npm run build:vite
+```
+The compiled static files will be available in the `desktop/dist` directory.
 
-If you choose a **Cloud API**, your source code and vulnerability data are sent to the provider you select using the API key you provide. Your API keys are encrypted locally using an AES-256-GCM vault and are never stored in plaintext.
+## License and Copyright
 
----
+Copyright (c) 2026 Navaneethan P
 
-##  License
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-This software is provided for free use under the MIT License.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
