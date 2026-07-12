@@ -53,17 +53,16 @@ export default function FixItPanel({ runId, stepContext, onClose }) {
     const initMsg = { role: 'user', content: `Initiating Auto-Fix (${modeStr})... Please wait while I analyze and mutate the vulnerability.` }
     setMessages(prev => [...prev, initMsg])
     try {
-      const res = await fetch(`${BACKEND}/api/runs/${runId}/autofix`, {
+      const res = await fetch(`${BACKEND}/api/chat/remediate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          step_context: stepContext,
-          mode: isShapeShift ? "shape_shift" : "patch"
+          context: stepContext
         })
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.detail || 'API Error')
-      setMessages(prev => [...prev, { role: 'assistant', content: `Auto-Fix complete! Patched code committed to local branch: \`${data.branch}\`. Push this branch to remote to open a PR.` }])
+      setMessages(prev => [...prev, { role: 'assistant', content: `Auto-Fix Generated:\n\n${data.patch}` }])
     } catch (e) {
       setMessages(prev => [...prev, { role: 'assistant', content: `Auto-Fix failed: ${e.message}` }])
     } finally {

@@ -42,6 +42,7 @@ async def run_pipeline(
     model_override, provider and api_key are request-scoped and never persisted.
     """
     work_dir: Optional[str] = None
+    success = False
 
     try:
         # ── Stage 1: Clone / prepare repo ──────────────────────────────
@@ -171,6 +172,7 @@ async def run_pipeline(
 
         # Store clone path so user can keep or delete via API
         _update_run_status(run_id, "done", report_url=report_url, work_dir_path=work_dir)
+        success = True
 
         await emit(queue, {
             "type": "done",
@@ -194,7 +196,8 @@ async def run_pipeline(
     finally:
         # On error, always clean up the clone.
         # On success, the clone is kept until the user decides via /api/runs/{id}/clone
-        pass
+        if not success and work_dir and os.path.exists(work_dir):
+            shutil.rmtree(work_dir, ignore_errors=True)
 
 
 def delete_clone(run_id: int) -> bool:

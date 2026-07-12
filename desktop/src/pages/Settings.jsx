@@ -629,7 +629,7 @@ export default function Settings() {
             <div className="settings-row">
               <div className="settings-row-label">Analysis Tools</div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {['Semgrep', 'Bandit', 'pip-audit', 'GitLeaks', 'D3.js'].map(t => (
+                {['Semgrep', 'Bandit', 'pip-audit', 'npm-audit', 'GitLeaks', 'D3.js'].map(t => (
                   <span key={t} className="badge badge-primary">{t}</span>
                 ))}
               </div>

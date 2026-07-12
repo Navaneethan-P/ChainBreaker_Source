@@ -69,3 +69,62 @@ Keep your answers concise and directly actionable.
         return {"response": response_text.strip()}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+class ActionRequest(BaseModel):
+    context: dict
+    model_override: Optional[str] = None
+    provider: Optional[str] = None
+    api_key: Optional[str] = None
+
+@router.post("/remediate")
+async def auto_remediate(request: ActionRequest):
+    """Generates an Auto-PR diff patch for a vulnerability."""
+    node = request.context.get("node", "Unknown")
+    weakness = request.context.get("weakness", "Unknown")
+    fix_hint = request.context.get("fix", "Unknown")
+    
+    prompt = f"""You are an automated DevSecOps remediation engine.
+A vulnerability was found in the codebase.
+Component: {node}
+Issue: {weakness}
+Suggested Fix: {fix_hint}
+
+Your task is to generate a git unified diff patch (or clear code snippet) that fixes this vulnerability.
+Only return the code patch inside a markdown block. Do not provide explanations.
+"""
+    try:
+        response_text = await generate(
+            prompt=prompt,
+            model=request.model_override,
+            openrouter_key=request.api_key,
+            temperature=0.1,
+            max_tokens=1000,
+        )
+        return {"patch": response_text.strip()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/explain")
+async def explain_eli5(request: ActionRequest):
+    """Explains an attack chain in simple ELI5 terms."""
+    title = request.context.get("title", "Unknown chain")
+    explanation = request.context.get("explanation", "")
+    
+    prompt = f"""You are a cybersecurity educator.
+Translate the following highly technical attack chain into an "Explain Like I'm 5" (ELI5) analogy.
+Chain: {title}
+Technical Details: {explanation}
+
+Use simple analogies (like locks, houses, keys). Keep it under 4 paragraphs. Be engaging and clear.
+"""
+    try:
+        response_text = await generate(
+            prompt=prompt,
+            model=request.model_override,
+            openrouter_key=request.api_key,
+            temperature=0.7,
+            max_tokens=800,
+        )
+        return {"explanation": response_text.strip()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

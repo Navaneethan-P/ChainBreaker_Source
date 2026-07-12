@@ -1,5 +1,5 @@
 {
-  "name": "attack-chain-mapper",
+  "name": "chainbreaker",
   "version": "1.0.0",
   "description": "Autonomous security sentinel — maps how vulnerabilities chain into real attack paths. Local, encrypted, open-source.",
   "author": "Navaneethan P <https://github.com/Navaneethan-P>",

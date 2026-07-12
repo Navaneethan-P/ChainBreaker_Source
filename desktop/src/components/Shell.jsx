@@ -2,6 +2,24 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { NavLink } from 'react-router-dom'
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
+const IconSun = () => (
+  <svg className="nav-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+  </svg>
+)
+
+const IconLogo = () => (
+  <svg viewBox="0 0 24 24" fill="none" style={{ width: 22, height: 22, marginRight: 8 }}>
+    <path d="M5 21V3L19 21V3" stroke="url(#n-gradient)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+    <defs>
+      <linearGradient id="n-gradient" x1="5" y1="3" x2="19" y2="21" gradientUnits="userSpaceOnUse">
+        <stop stopColor="#38BDF8" />
+        <stop offset="1" stopColor="#0284C7" />
+      </linearGradient>
+    </defs>
+  </svg>
+)
+
 const IconHome = () => (
   <svg className="nav-item-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
     <path d="M2 6.5L8 2l6 4.5V14H10v-3H6v3H2V6.5z"/>
@@ -188,7 +206,10 @@ export default function Shell({ children }) {
     <div className="app-shell">
       {/* Titlebar */}
       <div className="titlebar">
-        <span className="titlebar-wordmark">Attack Chain Mapper</span>
+        <span className="titlebar-wordmark" style={{ display: 'flex', alignItems: 'center', fontWeight: 700, letterSpacing: '-0.3px' }}>
+          <IconLogo />
+          ChainBreaker
+        </span>
         <SystemStatus />
       </div>
 
@@ -216,6 +237,12 @@ export default function Shell({ children }) {
             <NavLink to="/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
               <IconSettings /><span>Settings</span>
             </NavLink>
+            <button className="nav-item" onClick={() => {
+              const current = document.body.dataset.theme;
+              document.body.dataset.theme = current === 'light' ? 'dark' : 'light';
+            }} style={{ border: 'none', background: 'transparent', width: '100%', textAlign: 'left', fontFamily: 'inherit', color: 'inherit', cursor: 'pointer', padding: 0 }}>
+              <IconSun /><span>Toggle Theme</span>
+            </button>
           </div>
 
           <div className="sidebar-footer">
@@ -225,7 +252,7 @@ export default function Shell({ children }) {
               <span className="enc-indicator-text">AES-256-GCM LOCAL</span>
             </div>
             <div className="sidebar-footer-text">
-              Attack Chain Mapper<br />
+              ChainBreaker<br />
               Open Source — MIT License<br />
               <span
                 style={{ cursor: 'pointer', color: 'var(--primary)', fontWeight: 500 }}

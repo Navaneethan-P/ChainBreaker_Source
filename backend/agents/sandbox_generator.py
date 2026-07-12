@@ -3,13 +3,13 @@ import asyncio
 from typing import List
 from models import AttackChain, SandboxProfile, engine
 from sqlmodel import Session
-from llm.router import generate_chat_response
+from llm.router import generate
 
 async def generate_sandboxes(run_id: int, chains: List[AttackChain], queue: asyncio.Queue, model_override: str | None = None, provider: str | None = None, api_key: str | None = None):
     """
     Generates dynamic eBPF/seccomp and AppArmor profiles for nodes identified in high-impact attack chains.
     """
-    critical_chains = [c for c in chains if c.impact in ["Critical", "High"]]
+    critical_chains = [c for c in chains if c.get("impact") in ["Critical", "High"]]
     
     if not critical_chains:
         return []
@@ -43,9 +43,9 @@ async def generate_sandboxes(run_id: int, chains: List[AttackChain], queue: asyn
             """
             
             try:
-                response = await generate_chat_response(
-                    [{"role": "user", "content": prompt}],
-                    model_override=model_override,
+                response = await generate(
+                    prompt=prompt,
+                    model=model_override,
                     provider=provider,
                     api_key=api_key
                 )

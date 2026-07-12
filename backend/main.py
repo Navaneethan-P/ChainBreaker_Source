@@ -23,7 +23,7 @@ load_dotenv()
 
 from models import AnalysisRun, AttackChain, Finding, GraphData, ThreatIntelGraph, SandboxProfile, create_db_and_tables, engine
 from orchestrator import run_pipeline
-from routers import chat
+from routers import chat, export
 
 REPORTS_DIR = Path(__file__).parent / "reports"
 REPORTS_DIR.mkdir(exist_ok=True)
@@ -61,6 +61,7 @@ app.add_middleware(
 app.mount("/reports", StaticFiles(directory=str(REPORTS_DIR)), name="reports")
 
 app.include_router(chat.router)
+app.include_router(export.router)
 
 # SSE queues — one per run_id, in-memory only
 _sse_queues: dict[int, asyncio.Queue] = {}
@@ -369,7 +370,7 @@ async def autofix(run_id: int, req: AutoFixRequest):
     write the fix, commit it to a new local branch, and re-lock.
     """
     import os, stat, subprocess
-    from llm.router import generate_chat_response
+    from llm.router import generate
     
     with Session(engine) as session:
         run = session.get(AnalysisRun, run_id)
@@ -388,7 +389,7 @@ async def autofix(run_id: int, req: AutoFixRequest):
     messages = [{"role": "user", "content": prompt}]
     
     try:
-        patched_code = await generate_chat_response(messages)
+        patched_code = await generate(prompt)
         # Strip markdown code blocks if the LLM included them
         if patched_code.startswith("```"):
             lines = patched_code.split("\\n")

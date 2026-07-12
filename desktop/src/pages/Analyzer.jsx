@@ -9,22 +9,9 @@ const IconGithub = () => (
     <path d="M8 1C4.134 1 1 4.134 1 8c0 3.09 2.004 5.715 4.785 6.638.35.064.479-.151.479-.336v-1.18c-1.947.424-2.356-.937-2.356-.937-.319-.808-.778-1.023-.778-1.023-.636-.434.048-.425.048-.425.703.05 1.073.72 1.073.72.624 1.07 1.638.76 2.037.582.063-.453.244-.76.444-.935-1.553-.176-3.185-.777-3.185-3.458 0-.764.273-1.388.72-1.878-.072-.177-.312-.888.068-1.851 0 0 .587-.188 1.923.717A6.707 6.707 0 018 4.776a6.71 6.71 0 011.75.235c1.336-.905 1.922-.717 1.922-.717.381.963.141 1.674.069 1.851.448.49.72 1.114.72 1.878 0 2.688-1.635 3.28-3.191 3.453.251.216.474.644.474 1.298v1.924c0 .187.127.403.482.335C12.999 13.712 15 11.088 15 8c0-3.866-3.134-7-7-7z"/>
   </svg>
 )
-const IconFolder = () => (
-  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" style={{ width: 14, height: 14, flexShrink: 0 }}>
-    <path d="M2 4.5A1.5 1.5 0 013.5 3h3l1.5 2H13a1.5 1.5 0 011.5 1.5v6A1.5 1.5 0 0113 14H3a1.5 1.5 0 01-1.5-1.5v-8z"/>
-  </svg>
-)
-const IconFile = () => (
-  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" style={{ width: 14, height: 14, flexShrink: 0 }}>
-    <path d="M9 1H4a1 1 0 00-1 1v12a1 1 0 001 1h8a1 1 0 001-1V5L9 1z"/>
-    <path d="M9 1v4h4"/>
-  </svg>
-)
-const IconCode = () => (
-  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" style={{ width: 14, height: 14, flexShrink: 0 }}>
-    <path d="M5 4L1 8l4 4M11 4l4 4-4 4M9 2l-2 12"/>
-  </svg>
-)
+const IconFolder = () => null
+const IconFile = () => null
+const IconCode = () => null
 const IconShield = () => (
   <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" style={{ width: 13, height: 13, flexShrink: 0 }}>
     <path d="M8 1L2 3.5v4C2 11 5 13.5 8 15c3-1.5 6-4 6-7.5v-4L8 1z"/>
@@ -48,16 +35,14 @@ const IconLink = () => (
 )
 
 const INPUT_MODES = [
-  { id: 'url',    label: 'GitHub URL',     Icon: IconGithub },
-  { id: 'local',  label: 'Local Folder',   Icon: IconFolder },
-  { id: 'upload', label: 'Archive File',   Icon: IconFile },
-  { id: 'files',  label: 'HTML/CSS/JS',    Icon: IconCode },
+  { id: 'url', label: 'Repository URL (Git/Local/Drive)', Icon: IconGithub },
 ]
 
 const ANALYSIS_TOOLS = [
   { name: 'Semgrep',   type: 'SAST' },
   { name: 'Bandit',    type: 'Python' },
   { name: 'pip-audit', type: 'Deps' },
+  { name: 'npm-audit', type: 'Node.js' },
   { name: 'GitLeaks',  type: 'Secrets' },
 ]
 
@@ -68,10 +53,11 @@ const AI_PROVIDERS = [
   { id: 'openai', name: 'OpenAI GPT' },
 ]
 
-function isValidGithubUrl(url) {
+function isValidUrl(url) {
   try {
     const u = new URL(url)
-    return u.hostname === 'github.com' && u.pathname.split('/').filter(Boolean).length >= 2
+    const validHosts = ['github.com', 'gitlab.com', 'bitbucket.org', 'drive.google.com']
+    return validHosts.includes(u.hostname) || u.protocol === 'file:'
   } catch { return false }
 }
 
@@ -240,15 +226,10 @@ function FileLinkPreview({ files }) {
 
 export default function Analyzer() {
   const navigate = useNavigate()
-  const [mode, setMode]           = useState('url')
   const [url, setUrl]             = useState('')
-  const [localPath, setLocalPath] = useState('')
-  const [archivePath, setArchivePath] = useState('')
-  const [uploadedFiles, setUploadedFiles] = useState([])   // [{name, hasVuln}]
   const [models, setModels]       = useState([])
   const [engineConfig, setEngineConfig] = useState({ provider: 'ollama', model: 'unknown' })
   const [selectedModel, setSelectedModel] = useState('')
-  const [dragging, setDragging]   = useState(false)
   const [error, setError]         = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [ollamaOffline, setOllamaOffline] = useState(false)
@@ -286,28 +267,16 @@ export default function Analyzer() {
     fetchInfo()
   }, [])
 
-  const handlePickFolder = async () => {
-    const path = await window.acm.openDirectory()
-    if (path) setLocalPath(path)
-  }
-
-  const handlePickFile = async () => {
-    const path = await window.acm.openFile()
-    if (path) setArchivePath(path)
-  }
-
-  const handleFileDrop = (e) => {
-    e.preventDefault()
-    setDragging(false)
-    const droppedFiles = Array.from(e.dataTransfer.files)
-    const webFiles = droppedFiles
-      .filter(f => /\.(html|css|js|ts|jsx|tsx|java|cs|go)$/.test(f.name))
-      .map(f => ({ name: f.name, path: f.path, hasVuln: false }))
-    setUploadedFiles(prev => {
-      const all = [...prev, ...webFiles]
-      // Deduplicate by name
-      return all.filter((f, i, arr) => arr.findIndex(x => x.name === f.name) === i)
-    })
+  const refreshModels = async () => {
+    try {
+      const info = await window.acm.checkOllama()
+      setOllamaOffline(!info.running)
+      if (info.running) {
+        const names = (info.models || []).map(m => m.name)
+        setModels(names)
+        if (names.length > 0 && !selectedModel) setSelectedModel(names[0])
+      }
+    } catch (e) {}
   }
 
   const handleStartOllama = async () => {
@@ -331,13 +300,8 @@ export default function Analyzer() {
   }
 
   const validate = () => {
-    if (mode === 'url') {
-      if (!url.trim()) return 'Enter a GitHub repository URL.'
-      if (!isValidGithubUrl(url.trim())) return 'URL must point to a GitHub repository (github.com/owner/repo).'
-    }
-    if (mode === 'local'  && !localPath)   return 'Select a local repository folder.'
-    if (mode === 'upload' && !archivePath) return 'Select an archive file (.zip, .tar.gz).'
-    if (mode === 'files'  && uploadedFiles.length === 0) return 'Add at least one HTML, CSS, or JS file.'
+    if (!url.trim()) return 'Enter a repository URL.'
+    if (!isValidUrl(url.trim())) return 'URL must point to a supported repository (Git, Local File, or Drive).'
     if (engineConfig.provider === 'ollama' && !selectedModel && !ollamaOffline)
       return 'No Ollama model available. Ensure Ollama is running.'
     return ''
@@ -349,11 +313,7 @@ export default function Analyzer() {
     setError('')
     setSubmitting(true)
 
-    let repoUrl
-    if (mode === 'url')    repoUrl = url.trim()
-    else if (mode === 'local')  repoUrl = `file://${localPath}`
-    else if (mode === 'upload') repoUrl = `file://${archivePath}`
-    else if (mode === 'files')  repoUrl = `file://${uploadedFiles[0]?.path}`
+    let repoUrl = url.trim()
 
     try {
       const res = await fetch(`${BACKEND}/api/analyze`, {
@@ -418,125 +378,22 @@ export default function Analyzer() {
           <div className="card-title">Source</div>
         </div>
 
-        <div className="tab-bar mb-6">
-          {INPUT_MODES.map((m) => (
-            <button
-              key={m.id}
-              className={`tab-item ${mode === m.id ? 'active' : ''}`}
-              onClick={() => { setMode(m.id); setError('') }}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
-            >
-              <m.Icon />
-              {m.label}
-            </button>
-          ))}
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label className="form-label" style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--text-secondary)' }}>GitHub Repository URL</label>
+          <input
+            className="form-input"
+            type="url"
+            placeholder="https://github.com/owner/repository"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+            autoFocus
+            style={{ fontSize: 16, padding: '12px 16px' }}
+          />
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
+            Paste the link to any public GitHub repository. (Enterprise private repos coming soon).
+          </div>
         </div>
-
-        {mode === 'url' && (
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">GitHub Repository URL</label>
-            <input
-              className="form-input"
-              type="url"
-              placeholder="https://github.com/owner/repository"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-              autoFocus
-            />
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
-              Supports public GitHub repos. For private repos, use Local Folder mode.
-            </div>
-          </div>
-        )}
-
-        {mode === 'local' && (
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">Local Repository Path</label>
-            <div className="flex gap-2">
-              <input
-                className="form-input"
-                type="text"
-                placeholder="Click Browse to select folder..."
-                value={localPath}
-                readOnly
-              />
-              <button className="btn btn-secondary" style={{ flexShrink: 0 }} onClick={handlePickFolder}>
-                Browse
-              </button>
-            </div>
-          </div>
-        )}
-
-        {mode === 'upload' && (
-          <div
-            ref={dropRef}
-            className={`drop-zone ${dragging ? 'dragging' : ''}`}
-            onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(e) => { e.preventDefault(); setDragging(false); const p = e.dataTransfer.files[0]?.path; if (p) setArchivePath(p) }}
-            onClick={handlePickFile}
-          >
-            <div className="drop-zone-title">
-              {archivePath ? archivePath.split(/[\\/]/).pop() : 'Drop archive here or click to browse'}
-            </div>
-            <div className="drop-zone-subtitle">Supported: .zip, .tar, .tar.gz</div>
-          </div>
-        )}
-
-        {mode === 'files' && (
-          <div>
-            <div
-              className={`drop-zone ${dragging ? 'dragging' : ''}`}
-              style={{ marginBottom: 'var(--space-3)' }}
-              onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
-              onDragLeave={() => setDragging(false)}
-              onDrop={handleFileDrop}
-              onClick={async () => {
-                const path = await window.acm.openFile()
-                if (path) {
-                  const name = path.split(/[\\/]/).pop()
-                  if (/\.(html|css|js|ts|jsx|tsx)$/.test(name)) {
-                    setUploadedFiles(prev => {
-                      const filtered = prev.filter(f => f.name !== name)
-                      return [...filtered, { name, path, hasVuln: false }]
-                    })
-                  }
-                }
-              }}
-            >
-              <div className="drop-zone-title">
-                Drop Source Code files here
-              </div>
-              <div className="drop-zone-subtitle">Supports .html, .css, .js, .ts, .java, .cs, .go — linked files show thread visualization</div>
-            </div>
-
-            {uploadedFiles.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {uploadedFiles.map((file, i) => (
-                  <div key={i} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '8px 12px', background: 'var(--surface-raised)',
-                    border: '1px solid var(--surface-border)', borderRadius: 'var(--radius-md)',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <IconCode />
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{file.name}</span>
-                    </div>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      style={{ color: 'var(--critical)', padding: '2px 6px' }}
-                      onClick={() => setUploadedFiles(prev => prev.filter((_, j) => j !== i))}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-                <FileLinkPreview files={uploadedFiles} />
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* AI Engine */}
@@ -580,10 +437,14 @@ export default function Analyzer() {
             padding: 'var(--space-3) var(--space-4)',
             background: 'var(--medium-dim)', border: '1px solid var(--medium-border)',
             borderRadius: 'var(--radius-md)', fontSize: 12, color: 'var(--medium)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12
           }}>
-            No models installed. Run{' '}
-            <code style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>ollama pull qwen2.5-coder:3b</code>
-            {' '}in your terminal, then refresh.
+            <div>
+              No models installed. Run <code style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>ollama pull qwen2.5-coder:3b</code> in your terminal.
+            </div>
+            <button className="btn btn-sm btn-secondary" onClick={refreshModels} style={{ flexShrink: 0 }}>
+              Refresh
+            </button>
           </div>
         ) : models.length > 0 ? (
           <div className="form-group" style={{ marginBottom: 0 }}>

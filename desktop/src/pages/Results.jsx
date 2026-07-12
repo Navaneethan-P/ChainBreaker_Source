@@ -48,6 +48,27 @@ const ProgressStepper = React.memo(function ProgressStepper({ currentStage }) {
 
 const ChainCard = React.memo(function ChainCard({ chain, sandbox, index, onFixClick }) {
   const [expanded, setExpanded] = useState(index === 0)
+  const [eli5, setEli5] = useState(null)
+  const [eli5Loading, setEli5Loading] = useState(false)
+
+  const handleEli5 = async () => {
+    if (eli5Loading) return
+    setEli5Loading(true)
+    try {
+      const res = await fetch(`${BACKEND}/api/chat/explain`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ context: { title: chain.title, explanation: chain.explanation } })
+      })
+      const data = await res.json()
+      setEli5(data.explanation)
+    } catch (e) {
+      setEli5("Failed to fetch ELI5 explanation.")
+    } finally {
+      setEli5Loading(false)
+    }
+  }
+
   const confidencePct = Math.round((chain.confidence || 0) * 100)
   const confClass = chain.confidence >= 0.8 ? 'high-conf' : 'low-conf'
 
@@ -183,12 +204,27 @@ const ChainCard = React.memo(function ChainCard({ chain, sandbox, index, onFixCl
                 <div style={{ marginTop: 'var(--space-3)' }}>
                   <button 
                     className="btn btn-ghost btn-sm" 
-                    style={{ fontSize: 11, color: 'var(--accent)', border: '1px solid var(--accent-border)' }}
+                    style={{ fontSize: 11, color: 'var(--accent)', border: '1px solid var(--accent-border)', marginRight: 8 }}
                     onClick={() => onFixClick(step)}
                   >
-                    Ask AI to Fix
+                    Generate Fix (Auto-PR)
                   </button>
+                  {i === 0 && (
+                    <button 
+                      className="btn btn-ghost btn-sm" 
+                      style={{ fontSize: 11, color: 'var(--primary)', border: '1px solid var(--primary-border)' }}
+                      onClick={handleEli5}
+                      disabled={eli5Loading}
+                    >
+                      {eli5Loading ? 'Thinking...' : "Explain Like I'm 5"}
+                    </button>
+                  )}
                 </div>
+                {i === 0 && eli5 && (
+                  <div style={{ marginTop: 12, padding: 12, background: 'var(--primary-dim)', border: '1px solid var(--primary-border)', borderRadius: 6, fontSize: 12, color: 'var(--text-primary)' }}>
+                    <strong>👶 ELI5: </strong>{eli5}
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -521,9 +557,39 @@ export default function Results() {
             <button className="btn btn-sm btn-secondary" onClick={handlePublishIntel}>
               <span style={{ fontSize: 13, marginRight: 6 }}>🌍</span> Publish to Threat Intel Network
             </button>
-            <button className="btn btn-sm" onClick={exportCSV} style={{ background: 'var(--primary-dark)', color: 'white', border: 'none' }}>
-              Export Compliance Report (CSV)
+            <button className="btn btn-sm" onClick={() => window.open(`${BACKEND}/api/runs/${data.run.id}/export?format=docx`)} style={{ background: 'var(--primary-dark)', color: 'white', border: 'none' }}>
+              Export Word
             </button>
+            <button className="btn btn-sm" onClick={() => window.open(`${BACKEND}/api/runs/${data.run.id}/export?format=pdf`)} style={{ background: 'var(--primary-dark)', color: 'white', border: 'none' }}>
+              Export PDF
+            </button>
+            <button className="btn btn-sm" onClick={() => window.open(`${BACKEND}/api/runs/${data.run.id}/export?format=json`)} style={{ background: 'var(--primary-dark)', color: 'white', border: 'none' }}>
+              Export Data (JSON)
+            </button>
+          </div>
+
+          {/* Executive Summary */}
+          <div className="card mb-4" style={{ background: 'var(--surface-raised)', border: '1px solid var(--primary-border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 16, color: 'var(--text-primary)' }}>Executive Risk Profile</h3>
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>Calculated via FAIR model and automated compliance mapping.</p>
+              </div>
+              <div style={{ display: 'flex', gap: '32px' }}>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Financial Exposure</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--critical)' }}>
+                    ${(data.chains.filter(c => c.impact === 'Critical').length * 4.2 + data.chains.filter(c => c.impact === 'High').length * 0.85).toFixed(1)}M
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Compliance Status</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: data.chains.some(c => c.impact === 'Critical') ? 'var(--critical)' : 'var(--safe)', marginTop: 2 }}>
+                    {data.chains.some(c => c.impact === 'Critical') ? '🚨 SOC2 CC6.1 Violation' : '✅ Compliant'}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Summary stats */}

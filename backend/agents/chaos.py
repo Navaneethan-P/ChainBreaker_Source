@@ -7,7 +7,7 @@ from typing import Optional
 from datetime import datetime
 from models import AnalysisRun, engine
 from sqlmodel import Session
-from llm.router import generate_chat_response
+from llm.router import generate
 
 async def inject_chaos(run_id: int):
     """
@@ -55,7 +55,7 @@ async def inject_chaos(run_id: int):
     """
     
     try:
-        chaos_code = await generate_chat_response([{"role": "user", "content": prompt}])
+        chaos_code = await generate(prompt)
         if chaos_code.startswith("```"):
             lines = chaos_code.split("\n")
             chaos_code = "\n".join(lines[1:-1]) if lines[-1].startswith("```") else "\n".join(lines[1:])

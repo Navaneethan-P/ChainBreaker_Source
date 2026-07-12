@@ -227,12 +227,13 @@ export default function AttackGraph({ nodes = [], edges = [], highlightIds = [],
       const isHighlighted = highlightSet.has(node.id)
       const isCritical = node.severity === 'ERROR' || node.attack
       const nodeType = node.type || 'module'
+      const isLoot = node.id?.toLowerCase().match(/db|database|secret|config|env|key/i) || node.label?.toLowerCase().match(/db|database|secret|config|env|key/i)
 
       const nodeMatches = node.id?.toLowerCase().includes(sq) || node.label?.toLowerCase().includes(sq)
       const isDimmed = sq && !nodeMatches
 
       const fill   = NODE_FILL[nodeType]   || '#F8FAFF'
-      const stroke = isCritical ? '#EF4444' : (NODE_STROKE[nodeType] || '#0EA5E9')
+      const stroke = isCritical ? '#EF4444' : isLoot ? '#F59E0B' : (NODE_STROKE[nodeType] || '#0EA5E9')
 
       const ng = nodeGroup.append('g')
         .attr('transform', `translate(${node.x},${node.y})`)
@@ -277,6 +278,15 @@ export default function AttackGraph({ nodes = [], edges = [], highlightIds = [],
           .attr('cy', -16)
           .attr('r', 5)
           .attr('fill', SEVERITY_COLOR[node.severity] || '#94A3B8')
+      }
+
+      // Loot icon
+      if (isLoot) {
+        ng.append('text')
+          .attr('x', -18)
+          .attr('y', -12)
+          .attr('font-size', 12)
+          .text('💎')
       }
 
       // Node label below

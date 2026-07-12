@@ -55,6 +55,7 @@ const ANALYSIS_TOOLS = [
   { name: 'Semgrep', tag: 'SAST' },
   { name: 'Bandit', tag: 'Python' },
   { name: 'pip-audit', tag: 'Deps' },
+  { name: 'npm-audit', tag: 'Node.js' },
   { name: 'GitLeaks', tag: 'Secrets' },
 ]
 
@@ -80,18 +81,30 @@ export default function Home() {
   const [ollamaInfo, setOllamaInfo]     = useState({ running: false, models: [] })
   const [loading, setLoading]           = useState(true)
   const [startingOllama, setStartingOllama] = useState(false)
+  const [threatFeed, setThreatFeed]     = useState(THREAT_FEED)
 
   useEffect(() => {
     const init = async () => {
       try {
-        const [runsRes, ollama, configRes] = await Promise.all([
+        const [runsRes, ollama, configRes, intelRes] = await Promise.all([
           fetch(`${BACKEND}/api/runs`).then(r => r.json()).catch(() => []),
           window.acm.checkOllama(),
           fetch(`${BACKEND}/api/config/status`).then(r => r.json()).catch(() => ({ provider: 'ollama', model: '', has_key: false })),
+          fetch(`${BACKEND}/api/threat-intel`).then(r => r.json()).catch(() => []),
         ])
         setRecentRuns(runsRes.slice(0, 5))
         setOllamaInfo(ollama)
         setEngineConfig(configRes)
+        if (intelRes && intelRes.length > 0) {
+          const mapped = intelRes.slice(0, 5).map((t, idx) => ({
+            id: t.id || `dyn-${idx}`,
+            cve: `ID-${t.topology_hash.slice(0,8).toUpperCase()}`,
+            desc: t.nodes && t.nodes.length > 0 ? `Attack chain involving ${t.nodes[0].weakness || 'vulnerability'}` : 'Anonymous attack pattern',
+            time: new Date(t.published_at).toLocaleDateString(),
+            severity: (t.impact_level || 'HIGH').toUpperCase()
+          }))
+          setThreatFeed(mapped)
+        }
       } finally {
         setLoading(false)
       }
@@ -144,20 +157,22 @@ export default function Home() {
         </div>
       )}
 
-      {/* Ollama offline banner */}
-      {ollamaOffline && (
+      {/* AI Setup Warning */}
+      {(ollamaOffline || (engineConfig.provider === 'ollama' && ollamaInfo.models.length === 0)) && !loading && (
         <div className="alert alert-critical mb-6" style={{ justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <IconWarning />
-            <span>Ollama is not running. Start it to use local AI analysis.</span>
+            <div>
+              <div style={{ fontWeight: 600, marginBottom: 2 }}>AI Engine Not Ready</div>
+              <div style={{ fontSize: 12, opacity: 0.8 }}>Ollama is offline or no models are installed. Analysis requires an AI engine.</div>
+            </div>
           </div>
           <button
             className="btn btn-sm btn-success"
-            onClick={handleStartOllama}
-            disabled={startingOllama}
+            onClick={() => navigate('/setup')}
             style={{ gap: 5, flexShrink: 0 }}
           >
-            {startingOllama ? <><span className="spinner" style={{ width: 12, height: 12, borderWidth: 1.5 }} /> Starting...</> : <><IconPlay /> Start Ollama</>}
+            Run Setup Wizard
           </button>
         </div>
       )}
@@ -190,6 +205,43 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Achievements / Gamification */}
+      <div className="card mb-6" style={{ background: 'var(--surface-raised)', border: '1px solid var(--surface-border)' }}>
+        <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          🏅 Security Champion Achievements
+        </div>
+        <div style={{ display: 'flex', gap: 16, marginTop: 12, overflowX: 'auto', paddingBottom: 4 }}>
+          <div style={{ minWidth: 200, padding: 12, background: 'var(--safe-dim)', border: '1px solid var(--safe-border)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 24 }}>🛡️</span>
+            <div>
+              <div style={{ fontWeight: 600, color: 'var(--safe)' }}>First Blood</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Remediated an attack chain</div>
+            </div>
+          </div>
+          <div style={{ minWidth: 200, padding: 12, background: 'var(--primary-dim)', border: '1px solid var(--primary-border)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 24 }}>🎓</span>
+            <div>
+              <div style={{ fontWeight: 600, color: 'var(--primary-light)' }}>Threat Scholar</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Used ELI5 mode 5 times</div>
+            </div>
+          </div>
+          <div style={{ minWidth: 200, padding: 12, background: 'var(--surface-base)', border: '1px solid var(--surface-border)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8, opacity: 0.6 }}>
+            <span style={{ fontSize: 24, filter: 'grayscale(100%)' }}>👑</span>
+            <div>
+              <div style={{ fontWeight: 600, color: 'var(--text-muted)' }}>Zero Trust King</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Achieve 0 Critical Findings</div>
+            </div>
+          </div>
+          <div style={{ minWidth: 200, padding: 12, background: 'var(--surface-base)', border: '1px solid var(--surface-border)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8, opacity: 0.6 }}>
+            <span style={{ fontSize: 24, filter: 'grayscale(100%)' }}>🔥</span>
+            <div>
+              <div style={{ fontWeight: 600, color: 'var(--text-muted)' }}>Chaos Agent</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Inject Chaos 3 times</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Quick actions + engine */}
       <div className="flex gap-4 mb-6">
         {/* Primary CTA */}
@@ -210,7 +262,7 @@ export default function Home() {
                 <IconScan /> Scan a Repository
               </div>
               <div className="card-subtitle" style={{ color: 'var(--text-secondary)' }}>
-                GitHub URL, local folder, archive, or individual HTML/CSS/JS files
+                Paste a GitHub repository link to find attack chains
               </div>
             </div>
             <button
@@ -396,7 +448,7 @@ export default function Home() {
           <span className="badge badge-primary" style={{ animation: 'pulseNode 2s infinite' }}>LIVE</span>
         </div>
         <div className="flex flex-col gap-3">
-          {THREAT_FEED.map(t => (
+          {threatFeed.map(t => (
             <div key={t.id} className="flex items-center justify-between" style={{
               borderLeft: `3px solid ${t.severity === 'CRITICAL' ? 'var(--critical)' : 'var(--high)'}`,
               paddingLeft: 12,
