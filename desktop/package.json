@@ -32,8 +32,8 @@
     "wait-on": "^7.2.0"
   },
   "build": {
-    "appId": "io.github.navaneethan-p.attack-chain-mapper",
-    "productName": "Attack Chain Mapper",
+    "appId": "io.github.navaneethan-p.chainbreaker",
+    "productName": "ChainBreaker",
     "copyright": "Copyright 2025 Navaneethan P",
     "publish": null,
     "directories": {
@@ -59,7 +59,13 @@
     "win": {
       "target": [
         {
-          "target": "nsis",
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
           "arch": [
             "x64"
           ]
@@ -73,7 +79,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Attack Chain Mapper",
+      "shortcutName": "ChainBreaker",
       "license": "../LICENSE",
       "include": "build/installer.nsh",
       "installerIcon": "build/icon.ico",
