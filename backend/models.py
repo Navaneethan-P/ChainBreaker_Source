@@ -54,6 +54,24 @@ class AttackChain(SQLModel, table=True):
     historical_similarity: Optional[str] = None  # e.g. "2020 SolarWinds (82% match)"
 
 
+class ThreatIntelGraph(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    run_id: int
+    published_at: datetime = Field(default_factory=datetime.utcnow)
+    topology_hash: str  # Hash of the graph structure for signature matching
+    nodes_json: str = "[]"  # Anonymized/hashed nodes
+    edges_json: str = "[]"
+    impact_level: str
+
+
+class SandboxProfile(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    run_id: int = Field(foreign_key="analysisrun.id")
+    chain_id: int = Field(foreign_key="attackchain.id")
+    profile_type: str  # "seccomp" | "apparmor"
+    content: str       # The actual generated profile string
+
+
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
 

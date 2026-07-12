@@ -16,6 +16,10 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    watch: {
+      // Prevent Vite from locking electron-builder output folders
+      ignored: ['**/dist-app/**', '**/dist-app/**'],
+    },
   },
   build: {
     outDir: 'dist',

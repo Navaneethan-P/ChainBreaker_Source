@@ -4,16 +4,19 @@ const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('acm', {
   // App
-  isFirstRun:      () => ipcRenderer.invoke('app:is-first-run'),
-  markInitialized: () => ipcRenderer.invoke('app:mark-initialized'),
-  getVersion:      () => ipcRenderer.invoke('app:get-version'),
-  getBackendPort:  () => ipcRenderer.invoke('app:backend-port'),
+  isFirstRun:        () => ipcRenderer.invoke('app:is-first-run'),
+  markInitialized:   () => ipcRenderer.invoke('app:mark-initialized'),
+  resetInitialized:  () => ipcRenderer.invoke('app:reset-initialized'),
+  getVersion:        () => ipcRenderer.invoke('app:get-version'),
+  getBackendPort:    () => ipcRenderer.invoke('app:backend-port'),
 
   // System checks
-  checkOllama:  () => ipcRenderer.invoke('system:check-ollama'),
-  checkBackend: () => ipcRenderer.invoke('system:check-backend'),
+  checkOllama:    () => ipcRenderer.invoke('system:check-ollama'),
+  checkBackend:   () => ipcRenderer.invoke('system:check-backend'),
+  getSystemInfo:  () => ipcRenderer.invoke('system:get-system-info'),
 
-  // Ollama model management
+  // Ollama management
+  startOllama:    () => ipcRenderer.invoke('ollama:start-server'),
   pullModel: (modelName) => ipcRenderer.invoke('ollama:pull-model', modelName),
   onPullProgress: (callback) => {
     const handler = (_, data) => callback(data)

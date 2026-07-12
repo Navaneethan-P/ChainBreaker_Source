@@ -33,7 +33,7 @@ Instead of overwhelming you with a list of isolated warnings, it builds a **Cybe
 Attack Chain Mapper is distributed as a compiled executable. 
 
 1. **Download the Installer**  
-   Go to the [Releases](https://github.com/Navaneethan-P/Forge/releases) page and download `Attack Chain Mapper Setup X.X.X.exe`.
+   Go to the [Releases](https://github.com/Navaneethan-P/Attack_Chain_Mapper/releases) page and download `Attack Chain Mapper Setup X.X.X.exe`.
 
 2. **Run the Installer**  
    Double-click the `.exe` to install the application.

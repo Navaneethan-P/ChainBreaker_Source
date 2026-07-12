@@ -8,6 +8,7 @@ export default function FixItPanel({ runId, stepContext, onClose }) {
   ])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isShapeShift, setIsShapeShift] = useState(false)
   const bottomRef = useRef(null)
 
   useEffect(() => {
@@ -40,6 +41,31 @@ export default function FixItPanel({ runId, stepContext, onClose }) {
       setMessages(prev => [...prev, { role: 'assistant', content: data.response }])
     } catch (e) {
       setMessages(prev => [...prev, { role: 'assistant', content: 'An error occurred while connecting to the assistant.' }])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleAutoFix = async () => {
+    if (isLoading) return
+    setIsLoading(true)
+    const modeStr = isShapeShift ? 'Shape-Shift / Moving Target Defense' : 'Standard Patch'
+    const initMsg = { role: 'user', content: `Initiating Auto-Fix (${modeStr})... Please wait while I analyze and mutate the vulnerability.` }
+    setMessages(prev => [...prev, initMsg])
+    try {
+      const res = await fetch(`${BACKEND}/api/runs/${runId}/autofix`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          step_context: stepContext,
+          mode: isShapeShift ? "shape_shift" : "patch"
+        })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.detail || 'API Error')
+      setMessages(prev => [...prev, { role: 'assistant', content: `Auto-Fix complete! Patched code committed to local branch: \`${data.branch}\`. Push this branch to remote to open a PR.` }])
+    } catch (e) {
+      setMessages(prev => [...prev, { role: 'assistant', content: `Auto-Fix failed: ${e.message}` }])
     } finally {
       setIsLoading(false)
     }
@@ -112,7 +138,21 @@ export default function FixItPanel({ runId, stepContext, onClose }) {
               Context: {stepContext.node}
             </div>
           </div>
-          <button className="btn btn-ghost" onClick={onClose} style={{ padding: '4px 8px' }}>✕</button>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <label style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--accent)', cursor: 'pointer' }}>
+              <input 
+                type="checkbox" 
+                checked={isShapeShift} 
+                onChange={(e) => setIsShapeShift(e.target.checked)} 
+                disabled={isLoading}
+              />
+              Shape-Shift (MTD)
+            </label>
+            <button className="btn btn-sm btn-primary" onClick={handleAutoFix} disabled={isLoading}>
+              Auto-Fix & Branch
+            </button>
+            <button className="btn btn-ghost" onClick={onClose} style={{ padding: '4px 8px' }}>✕</button>
+          </div>
         </div>
 
         {/* Messages */}

@@ -21,7 +21,7 @@ from sqlmodel import Session, select
 
 load_dotenv()
 
-from models import AnalysisRun, AttackChain, Finding, GraphData, create_db_and_tables, engine
+from models import AnalysisRun, AttackChain, Finding, GraphData, ThreatIntelGraph, SandboxProfile, create_db_and_tables, engine
 from orchestrator import run_pipeline
 from routers import chat
 
@@ -79,6 +79,10 @@ class ConfigRequest(BaseModel):
     provider: str
     model: str | None = None
     api_key: str | None = None
+
+
+class InstallToolRequest(BaseModel):
+    name: str
 
 
 # ─── Health ────────────────────────────────────────────────────────────────────
@@ -185,6 +189,7 @@ async def get_run(run_id: int):
             .where(AttackChain.run_id == run_id)
             .order_by(AttackChain.chain_index)
         ).all()
+        sandboxes = session.exec(select(SandboxProfile).where(SandboxProfile.run_id == run_id)).all()
 
         return {
             "run": {
@@ -225,6 +230,15 @@ async def get_run(run_id: int):
                 }
                 for c in chains
             ],
+            "sandboxes": [
+                {
+                    "id": s.id,
+                    "chain_id": s.chain_id,
+                    "profile_type": s.profile_type,
+                    "content": s.content
+                }
+                for s in sandboxes
+            ]
         }
 
 
@@ -247,6 +261,208 @@ async def list_runs():
             }
             for r in runs
         ]
+
+
+# ─── Decentralized Threat Intel (Simulated) ───────────────────────────────────
+
+@app.post("/api/threat-intel/publish/{run_id}", tags=["threat-intel"])
+async def publish_threat_intel(run_id: int):
+    """Anonymize and publish attack chains as Threat Intel graphs."""
+    import hashlib
+    with Session(engine) as session:
+        run = session.get(AnalysisRun, run_id)
+        if not run:
+            raise HTTPException(status_code=404, detail="Run not found.")
+            
+        chains = session.exec(select(AttackChain).where(AttackChain.run_id == run_id)).all()
+        if not chains:
+            return {"status": "no_chains", "published": 0}
+            
+        published_count = 0
+        for chain in chains:
+            # Simple anonymization: hash the steps to extract structural topology
+            steps = json.loads(chain.steps_json)
+            anon_nodes = []
+            anon_edges = []
+            
+            for i, step in enumerate(steps):
+                node_hash = hashlib.sha256(step.get('node', '').encode()).hexdigest()[:12]
+                anon_nodes.append({"id": node_hash, "type": "anonymized_node", "weakness": step.get('weakness', 'unknown')})
+                if i > 0:
+                    prev_hash = hashlib.sha256(steps[i-1].get('node', '').encode()).hexdigest()[:12]
+                    anon_edges.append({"source": prev_hash, "target": node_hash, "action": step.get('action', 'exploits')})
+                    
+            topology_str = json.dumps(anon_edges, sort_keys=True)
+            topology_hash = hashlib.sha256(topology_str.encode()).hexdigest()
+            
+            intel = ThreatIntelGraph(
+                run_id=run_id,
+                topology_hash=topology_hash,
+                nodes_json=json.dumps(anon_nodes),
+                edges_json=json.dumps(anon_edges),
+                impact_level=chain.impact
+            )
+            session.add(intel)
+            published_count += 1
+            
+        session.commit()
+        return {"status": "ok", "published": published_count}
+
+
+@app.get("/api/threat-intel", tags=["threat-intel"])
+async def get_threat_intel():
+    """Retrieve all published Threat Intel graphs."""
+    with Session(engine) as session:
+        intel = session.exec(select(ThreatIntelGraph).order_by(ThreatIntelGraph.published_at.desc())).all()
+        return [
+            {
+                "id": t.id,
+                "published_at": t.published_at.isoformat(),
+                "topology_hash": t.topology_hash,
+                "nodes": json.loads(t.nodes_json),
+                "edges": json.loads(t.edges_json),
+                "impact_level": t.impact_level
+            }
+            for t in intel
+        ]
+
+
+# ─── File Preview ──────────────────────────────────────────────────────────────
+
+@app.get("/api/runs/{run_id}/file", tags=["results"])
+async def get_file_content(run_id: int, path: str):
+    """Serve a file from the quarantined Security Box."""
+    import os
+    with Session(engine) as session:
+        run = session.get(AnalysisRun, run_id)
+        if not run or not run.work_dir_path:
+            raise HTTPException(status_code=404, detail="Run or repository clone not found.")
+        
+        # Security: Prevent path traversal
+        base_path = os.path.abspath(run.work_dir_path)
+        target_path = os.path.abspath(os.path.join(base_path, path.lstrip('/\\')))
+        
+        if os.path.commonpath([base_path, target_path]) != base_path:
+            raise HTTPException(status_code=403, detail="Path traversal attempt blocked.")
+            
+        if not os.path.isfile(target_path):
+            raise HTTPException(status_code=404, detail="File not found in repository.")
+            
+        try:
+            with open(target_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            return {"content": content}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Could not read file: {e}")
+
+
+# ─── Auto-Fix ──────────────────────────────────────────────────────────────────
+
+class AutoFixRequest(BaseModel):
+    step_context: dict
+    mode: str = "patch"  # "patch" or "shape_shift"
+
+@app.post("/api/runs/{run_id}/autofix", tags=["results"])
+async def autofix(run_id: int, req: AutoFixRequest):
+    """
+    Generate patched code via LLM, temporarily lift permissions in the Security Box, 
+    write the fix, commit it to a new local branch, and re-lock.
+    """
+    import os, stat, subprocess
+    from llm.router import generate_chat_response
+    
+    with Session(engine) as session:
+        run = session.get(AnalysisRun, run_id)
+        if not run or not run.work_dir_path:
+            raise HTTPException(status_code=404, detail="Run clone not found on disk.")
+            
+    # 1. Ask AI for the patch
+    if req.mode == "shape_shift":
+        prompt = f"""Given this vulnerability context: {json.dumps(req.step_context)}, provide ONLY the fully patched source code for the affected file. 
+        CRITICAL MTD REQUIREMENT: Implement Moving Target Defense (Shape-Shifting). 
+        Do not just patch the bug. Heavily mutate the surrounding code structure, rename variables, alter control flows, and insert benign dummy operations to evade static signatures, while keeping the external API and logic exactly the same.
+        Do not include markdown formatting or explanations."""
+    else:
+        prompt = f"Given this vulnerability context: {json.dumps(req.step_context)}, provide ONLY the fully patched source code for the affected file. Do not include markdown formatting or explanations."
+        
+    messages = [{"role": "user", "content": prompt}]
+    
+    try:
+        patched_code = await generate_chat_response(messages)
+        # Strip markdown code blocks if the LLM included them
+        if patched_code.startswith("```"):
+            lines = patched_code.split("\\n")
+            patched_code = "\\n".join(lines[1:-1]) if lines[-1].startswith("```") else "\\n".join(lines[1:])
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI failure: {e}")
+
+    # 2. Extract file path from context
+    file_path = req.step_context.get("node", "")
+    if not file_path:
+        raise HTTPException(status_code=400, detail="Could not determine file path from step context.")
+        
+    base_path = os.path.abspath(run.work_dir_path)
+    target_path = os.path.abspath(os.path.join(base_path, file_path.lstrip('/\\')))
+    
+    if not target_path.startswith(base_path) or not os.path.isfile(target_path):
+        raise HTTPException(status_code=404, detail="Target file not found in clone.")
+
+    # 3. Lift permissions, apply fix, git commit, re-lock
+    try:
+        os.chmod(target_path, stat.S_IWRITE | stat.S_IREAD)
+        
+        # Git operations (only works if repo is a git clone)
+        branch_name = f"auto-fix-{run_id}-{int(datetime.utcnow().timestamp())}"
+        if os.path.isdir(os.path.join(base_path, ".git")):
+            subprocess.run(["git", "checkout", "-b", branch_name], cwd=base_path, check=False)
+            
+        with open(target_path, "w", encoding="utf-8") as f:
+            f.write(patched_code)
+            
+        if os.path.isdir(os.path.join(base_path, ".git")):
+            subprocess.run(["git", "add", file_path], cwd=base_path, check=False)
+            subprocess.run(["git", "commit", "-m", f"Security Auto-Fix for {file_path}"], cwd=base_path, check=False)
+            
+        os.chmod(target_path, stat.S_IREAD)
+        return {"status": "ok", "branch": branch_name}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to apply patch: {e}")
+
+
+# ─── Chaos Engineering ─────────────────────────────────────────────────────────
+
+@app.post("/api/runs/{run_id}/chaos", tags=["results"])
+async def trigger_chaos(run_id: int):
+    """Inject an AI-generated vulnerability into the cloned repository."""
+    from agents.chaos import inject_chaos
+    result = await inject_chaos(run_id)
+    if result.get("status") == "error":
+        raise HTTPException(status_code=500, detail=result.get("detail"))
+    return result
+
+
+# ─── CI/CD Webhooks ────────────────────────────────────────────────────────────
+
+@app.post("/api/webhooks/github", tags=["pipeline"])
+async def github_webhook(payload: dict):
+    """
+    Listen for GitHub push events and automatically spawn analysis.
+    """
+    repo_url = payload.get("repository", {}).get("clone_url")
+    if not repo_url:
+        return {"status": "ignored", "reason": "No clone_url in payload"}
+        
+    # Create run
+    with Session(engine) as session:
+        new_run = AnalysisRun(repo_url=repo_url, status="pending")
+        session.add(new_run)
+        session.commit()
+        session.refresh(new_run)
+        
+    # Start orchestrator in background
+    from orchestrator import run_pipeline
+    asyncio.create_task(run_pipeline(new_run.id, repo_url))
+    return {"status": "started", "run_id": new_run.id}
 
 
 # ─── Clone Management ─────────────────────────────────────────────────────────
@@ -274,6 +490,9 @@ async def manage_clone(run_id: int, body: CloneAction):
         clone_path = run.work_dir_path
 
     if body.action == "delete":
+        if clone_path and os.path.exists(clone_path):
+            from orchestrator import secure_wipe_directory
+            secure_wipe_directory(clone_path)
         deleted = delete_clone(run_id)
         return {"action": "deleted", "success": deleted}
 
@@ -289,6 +508,17 @@ async def manage_clone(run_id: int, body: CloneAction):
 
         if dest.exists():
             shutil.rmtree(dest)
+
+        import stat
+        # Lift read-only permissions from Security Box before moving
+        for root, dirs, files in os.walk(clone_path):
+            for file in files:
+                filepath = os.path.join(root, file)
+                try:
+                    os.chmod(filepath, stat.S_IWRITE)
+                except Exception:
+                    pass
+
         shutil.move(clone_path, str(dest))
 
         with Session(engine) as session:
@@ -341,9 +571,10 @@ async def save_config(req: ConfigRequest):
                     
     # Update
     env_vars["AI_PROVIDER"] = req.provider
-    if req.model:
+    if req.model is not None:
         env_vars["AI_MODEL"] = req.model
     if req.api_key is not None:
+        # Allow explicitly clearing the key by passing empty string
         env_vars["AI_API_KEY"] = req.api_key
         
     # Write back
@@ -363,10 +594,72 @@ async def save_config(req: ConfigRequest):
 
 @app.get("/api/config/status", tags=["config"])
 async def get_config_status():
-    """Return the currently configured AI provider."""
+    """Return the currently configured AI provider and whether an API key exists."""
     provider = os.getenv("AI_PROVIDER", "ollama")
-    model = os.getenv("AI_MODEL", "qwen2.5-coder:3b" if provider == "ollama" else "")
-    return {"provider": provider, "model": model}
+    model    = os.getenv("AI_MODEL", "qwen2.5-coder:3b" if provider == "ollama" else "")
+    api_key  = os.getenv("AI_API_KEY", "")
+    return {
+        "provider": provider,
+        "model":    model,
+        "has_key":  bool(api_key and api_key.strip()),
+    }
+
+
+class TestConfigRequest(BaseModel):
+    provider: str
+    model: str | None = None
+    api_key: str
+
+
+@app.post("/api/config/test", tags=["config"])
+async def test_config(req: TestConfigRequest):
+    """
+    Validate an API key by making a minimal test call to the provider.
+    Returns {ok: true} on success or {ok: false, detail: str} on failure.
+    """
+    import httpx
+    try:
+        if req.provider == "ollama":
+            async with httpx.AsyncClient(timeout=3) as client:
+                r = await client.get("http://127.0.0.1:11434/api/tags")
+                return {"ok": r.status_code == 200}
+
+        elif req.provider == "claude":
+            headers = {
+                "x-api-key":         req.api_key,
+                "anthropic-version": "2023-06-01",
+                "content-type":      "application/json",
+            }
+            payload = {
+                "model":      req.model or "claude-3-5-haiku-20241022",
+                "max_tokens": 5,
+                "messages":   [{"role": "user", "content": "hi"}],
+            }
+            async with httpx.AsyncClient(timeout=15) as client:
+                r = await client.post("https://api.anthropic.com/v1/messages", headers=headers, json=payload)
+                if r.status_code in (200, 400):  # 400 still means auth passed
+                    return {"ok": True}
+                return {"ok": False, "detail": f"HTTP {r.status_code}: {r.text[:200]}"}
+
+        elif req.provider == "gemini":
+            url = f"https://generativelanguage.googleapis.com/v1beta/models?key={req.api_key}"
+            async with httpx.AsyncClient(timeout=10) as client:
+                r = await client.get(url)
+                if r.status_code == 200:
+                    return {"ok": True}
+                return {"ok": False, "detail": f"HTTP {r.status_code}: {r.text[:200]}"}
+
+        elif req.provider == "openai":
+            headers = {"Authorization": f"Bearer {req.api_key}", "Content-Type": "application/json"}
+            async with httpx.AsyncClient(timeout=10) as client:
+                r = await client.get("https://api.openai.com/v1/models", headers=headers)
+                if r.status_code == 200:
+                    return {"ok": True}
+                return {"ok": False, "detail": f"HTTP {r.status_code}: {r.text[:200]}"}
+
+        return {"ok": False, "detail": "Unknown provider"}
+    except Exception as e:
+        return {"ok": False, "detail": str(e)}
 
 
 # ─── Ollama proxy (model list for UI) ─────────────────────────────────────────
@@ -377,3 +670,84 @@ async def list_models():
     from llm.router import list_local_models
     models = await list_local_models()
     return {"models": models}
+
+
+# ─── System Tools Detection ────────────────────────────────────────────────────
+
+@app.get("/api/system/tools", tags=["system"])
+async def get_system_tools():
+    """
+    Detect which analysis tools and runtimes are available on this system.
+    Returns name, version, installed status for each tool.
+    """
+    import shutil
+    import subprocess
+
+    def check_tool(cmd: list[str], name: str) -> dict:
+        exe = shutil.which(cmd[0])
+        if not exe:
+            return {"name": name, "installed": False, "version": None}
+        try:
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, timeout=5
+            )
+            version_line = (result.stdout or result.stderr or "").strip().splitlines()
+            version = version_line[0] if version_line else "unknown"
+            return {"name": name, "installed": True, "version": version[:80]}
+        except Exception as e:
+            return {"name": name, "installed": bool(exe), "version": str(e)[:80]}
+
+    tools = [
+        check_tool(["semgrep", "--version"], "Semgrep"),
+        check_tool(["bandit", "--version"], "Bandit"),
+        check_tool(["pip-audit", "--version"], "pip-audit"),
+        check_tool(["git", "--version"], "Git"),
+        check_tool(["python", "--version"], "Python"),
+        check_tool(["ollama", "--version"], "Ollama"),
+        check_tool(["node", "--version"], "Node.js"),
+    ]
+    return {"tools": tools}
+
+
+@app.post("/api/system/tools/install", tags=["system"])
+async def install_system_tool(req: InstallToolRequest):
+    import subprocess
+    import sys
+    
+    tool_name = req.name.lower()
+    
+    # Python tools
+    if tool_name in ["semgrep", "bandit", "pip-audit"]:
+        try:
+            result = subprocess.run(
+                [sys.executable, "-m", "pip", "install", tool_name],
+                capture_output=True, text=True, timeout=120
+            )
+            if result.returncode == 0:
+                return {"status": "ok", "detail": f"{req.name} installed successfully"}
+            return {"status": "error", "detail": result.stderr}
+        except Exception as e:
+            return {"status": "error", "detail": str(e)}
+
+    # System tools via Winget (Windows)
+    winget_map = {
+        "git": "Git.Git",
+        "ollama": "Ollama.Ollama",
+        "node.js": "OpenJS.NodeJS"
+    }
+
+    if tool_name in winget_map:
+        package_id = winget_map[tool_name]
+        try:
+            result = subprocess.run(
+                ["winget", "install", "-e", "--id", package_id, "--accept-source-agreements", "--accept-package-agreements"],
+                capture_output=True, text=True, timeout=300
+            )
+            if result.returncode == 0:
+                return {"status": "ok", "detail": f"{req.name} installed successfully"}
+            return {"status": "error", "detail": result.stderr or result.stdout}
+        except Exception as e:
+            return {"status": "error", "detail": str(e)}
+            
+    return {"status": "error", "detail": "Installation for this tool is not supported"}
+

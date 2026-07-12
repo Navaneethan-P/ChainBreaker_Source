@@ -6,6 +6,8 @@ import Home from './pages/Home'
 import Analyzer from './pages/Analyzer'
 import Results from './pages/Results'
 import History from './pages/History'
+import Settings from './pages/Settings'
+import ThreatIntel from './pages/ThreatIntel'
 
 export default function App() {
   const [ready, setReady] = useState(false)
@@ -36,14 +38,16 @@ export default function App() {
   return (
     <Shell>
       <Routes>
-        <Route path="/"          element={<Home />} />
-        <Route path="/analyze"   element={<Analyzer />} />
+        <Route path="/"               element={<Home />} />
+        <Route path="/analyze"        element={<Analyzer />} />
         <Route path="/results/:runId" element={<Results />} />
-        <Route path="/history"   element={<History />} />
-        <Route path="/setup"     element={
+        <Route path="/history"        element={<History />} />
+        <Route path="/threat-intel"   element={<ThreatIntel />} />
+        <Route path="/settings"       element={<Settings />} />
+        <Route path="/setup"          element={
           <Installer onComplete={() => window.location.href = '/'} />
         } />
-        <Route path="*"          element={<Navigate to="/" replace />} />
+        <Route path="*"               element={<Navigate to="/" replace />} />
       </Routes>
     </Shell>
   )

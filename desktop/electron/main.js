@@ -97,12 +97,12 @@ function createWindow() {
     height: 900,
     minWidth: 1100,
     minHeight: 700,
-    backgroundColor: '#080C14',
+    backgroundColor: '#F0F7FF',
     titleBarStyle: 'hidden',
     titleBarOverlay: {
-      color: '#080C14',
-      symbolColor: '#4A5568',
-      height: 36,
+      color: '#FFFFFF',
+      symbolColor: '#0EA5E9',
+      height: 38,
     },
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -125,7 +125,14 @@ function createWindow() {
   }
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url)
+    try {
+      const parsed = new URL(url)
+      if (['https:', 'http:'].includes(parsed.protocol)) {
+        shell.openExternal(url)
+      }
+    } catch (e) {
+      // Invalid URL
+    }
     return { action: 'deny' }
   })
 }
@@ -134,6 +141,10 @@ function createWindow() {
 
 ipcMain.handle('app:is-first-run',       () => isFirstRun())
 ipcMain.handle('app:mark-initialized',   () => markInitialized())
+ipcMain.handle('app:reset-initialized',  () => {
+  const marker = path.join(app.getPath('userData'), '.initialized')
+  if (fs.existsSync(marker)) fs.unlinkSync(marker)
+})
 ipcMain.handle('app:get-version',        () => app.getVersion())
 ipcMain.handle('app:backend-port',       () => BACKEND_PORT)
 
@@ -185,7 +196,61 @@ ipcMain.handle('ollama:pull-model', (_, modelName) => {
   })
 })
 
-ipcMain.handle('shell:open-external', (_, url) => shell.openExternal(url))
+ipcMain.handle('shell:open-external', (_, url) => {
+  try {
+    const parsed = new URL(url)
+    if (['https:', 'http:'].includes(parsed.protocol)) {
+      shell.openExternal(url)
+    }
+  } catch (e) {}
+})
+
+// Start Ollama server in background
+let ollamaServerProcess = null
+ipcMain.handle('ollama:start-server', () => {
+  return new Promise((resolve) => {
+    if (ollamaServerProcess && !ollamaServerProcess.killed) {
+      resolve({ started: true, already: true })
+      return
+    }
+    try {
+      ollamaServerProcess = spawn('ollama', ['serve'], {
+        stdio: ['ignore', 'pipe', 'pipe'],
+        detached: false,
+      })
+      ollamaServerProcess.on('error', (err) => {
+        resolve({ started: false, error: err.message })
+      })
+      // Give it 2 seconds to start
+      setTimeout(() => resolve({ started: true, pid: ollamaServerProcess.pid }), 2000)
+    } catch (err) {
+      resolve({ started: false, error: err.message })
+    }
+  })
+})
+
+// Get system information
+ipcMain.handle('system:get-system-info', () => {
+  const results = {}
+  const tools = [
+    { key: 'python', cmd: 'python --version' },
+    { key: 'git', cmd: 'git --version' },
+    { key: 'ollama', cmd: 'ollama --version' },
+    { key: 'node', cmd: 'node --version' },
+    { key: 'semgrep', cmd: 'semgrep --version' },
+  ]
+  for (const tool of tools) {
+    try {
+      const out = execSync(tool.cmd, { stdio: 'pipe', timeout: 3000 }).toString().trim()
+      results[tool.key] = { installed: true, version: out.split('\n')[0].slice(0, 60) }
+    } catch {
+      results[tool.key] = { installed: false, version: null }
+    }
+  }
+  results.platform = process.platform
+  results.arch = process.arch
+  return results
+})
 
 ipcMain.handle('dialog:open-directory', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {

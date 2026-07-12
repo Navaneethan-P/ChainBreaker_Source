@@ -65,7 +65,8 @@
           ]
         }
       ],
-      "requestedExecutionLevel": "asInvoker"
+      "icon": "build/icon.ico",
+      "requestedExecutionLevel": "requireAdministrator"
     },
     "nsis": {
       "oneClick": false,
@@ -73,7 +74,11 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Attack Chain Mapper",
-      "license": "../LICENSE"
+      "license": "../LICENSE",
+      "include": "build/installer.nsh",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico"
     },
     "mac": {
       "target": "dmg",

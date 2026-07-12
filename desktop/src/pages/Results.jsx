@@ -17,64 +17,36 @@ const STAGE_LABEL = {
   error:     'Analysis failed',
 }
 
-function ProgressStepper({ currentStage }) {
+const ProgressStepper = React.memo(function ProgressStepper({ currentStage }) {
   const idx = STAGES.indexOf(currentStage)
   return (
-    <div className="flex gap-0" style={{ marginBottom: 'var(--space-6)' }}>
-      {STAGES.map((stage, i) => (
-        <div
-          key={stage}
-          style={{
-            flex: 1,
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 6,
-          }}
-        >
-          {/* connector */}
-          {i < STAGES.length - 1 && (
-            <div style={{
-              position: 'absolute',
-              top: 7,
-              left: '50%',
-              width: '100%',
-              height: 1,
-              background: i < idx ? 'var(--accent)' : 'var(--surface-border)',
-              transition: 'background 300ms',
-              zIndex: 0,
-            }} />
-          )}
-          <div style={{
-            width: 14,
-            height: 14,
-            borderRadius: '50%',
-            border: `1px solid ${i < idx ? 'var(--accent)' : i === idx ? 'var(--accent)' : 'var(--surface-border)'}`,
-            background: i < idx ? 'var(--accent)' : 'var(--surface-raised)',
-            zIndex: 1,
-            flexShrink: 0,
-            transition: 'all 200ms',
-          }} />
-          <span style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 9,
-            color: i <= idx ? 'var(--text-secondary)' : 'var(--text-tertiary)',
-            textAlign: 'center',
-            lineHeight: 1.3,
-            maxWidth: 60,
-            textTransform: 'uppercase',
-            letterSpacing: '0.04em',
-          }}>
-            {STAGE_LABEL[stage].split(' ').slice(-1)[0]}
-          </span>
-        </div>
-      ))}
+    <div className="progress-stepper">
+      {STAGES.map((stage, i) => {
+        const isDone   = i < idx
+        const isActive = i === idx
+        return (
+          <div key={stage} className="stepper-step">
+            {i < STAGES.length - 1 && (
+              <div className={`stepper-connector ${isDone ? 'done' : ''}`} />
+            )}
+            <div className={`stepper-dot ${isDone ? 'done' : isActive ? 'active' : ''}`}>
+              {isDone && (
+                <svg viewBox="0 0 10 10" fill="none" stroke="white" strokeWidth="1.8" style={{ width: 10, height: 10 }}>
+                  <path d="M2 5l2.5 2.5L8 3"/>
+                </svg>
+              )}
+            </div>
+            <span className={`stepper-label ${isDone ? 'done' : isActive ? 'active' : ''}`}>
+              {STAGE_LABEL[stage].split(' ').slice(-1)[0]}
+            </span>
+          </div>
+        )
+      })}
     </div>
   )
-}
+})
 
-function ChainCard({ chain, index, onFixClick }) {
+const ChainCard = React.memo(function ChainCard({ chain, sandbox, index, onFixClick }) {
   const [expanded, setExpanded] = useState(index === 0)
   const confidencePct = Math.round((chain.confidence || 0) * 100)
   const confClass = chain.confidence >= 0.8 ? 'high-conf' : 'low-conf'
@@ -97,12 +69,54 @@ function ChainCard({ chain, index, onFixClick }) {
               </div>
               <span className="confidence-value">{confidencePct}%</span>
             </div>
-            <span className="text-mono text-xs text-muted">
+            <span className="text-mono text-xs text-muted" style={{ marginRight: 8 }}>
               {chain.steps?.length || 0} step{chain.steps?.length !== 1 ? 's' : ''}
+            </span>
+            
+            {/* Dynamic Tags */}
+            <span style={{
+              padding: '2px 6px', background: 'var(--primary-dim)', border: '1px solid var(--primary-border)',
+              borderRadius: 'var(--radius-sm)', fontSize: 9, fontWeight: 600, color: 'var(--primary-light)'
+            }}>
+              Attack Opening
+            </span>
+            
+            {chain.impact === 'Critical' && (
+              <span style={{
+                padding: '2px 6px', background: 'var(--critical-dim)', border: '1px solid var(--critical-border)',
+                borderRadius: 'var(--radius-sm)', fontSize: 9, fontWeight: 600, color: 'var(--critical)'
+              }}>
+                Critical Opening
+              </span>
+            )}
+            
+            {chain.steps?.some(s => s.action?.toLowerCase().match(/script|shell|bash|python|exec/)) && (
+              <span style={{
+                padding: '2px 6px', background: 'var(--warning-dim)', border: '1px solid var(--warning-border)',
+                borderRadius: 'var(--radius-sm)', fontSize: 9, fontWeight: 600, color: 'var(--warning)'
+              }}>
+                Scripted Attack
+              </span>
+            )}
+            
+            {chain.steps?.some(s => s.action?.toLowerCase().match(/payload|rce|injection|malicious/)) && (
+              <span style={{
+                padding: '2px 6px', background: 'var(--critical-dim)', border: '1px solid var(--critical-border)',
+                borderRadius: 'var(--radius-sm)', fontSize: 9, fontWeight: 600, color: 'var(--critical)'
+              }}>
+                Malicious Payload
+              </span>
+            )}
+
+            <span style={{
+              padding: '2px 6px', background: 'var(--surface-active)', border: '1px solid var(--surface-border)',
+              borderRadius: 'var(--radius-sm)', fontSize: 9, fontWeight: 600, color: 'var(--text-secondary)'
+            }}>
+              SOC2
             </span>
           </div>
         </div>
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="var(--text-tertiary)" strokeWidth="1.5"
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="var(--text-muted)" strokeWidth="1.5"
           style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 150ms', flexShrink: 0, marginTop: 4 }}>
           <path d="M2 4l4 4 4-4" />
         </svg>
@@ -112,20 +126,19 @@ function ChainCard({ chain, index, onFixClick }) {
       {chain.historical_similarity && (
         <div style={{
           padding: '8px 14px',
-          background: 'linear-gradient(90deg, rgba(239,68,68,0.08) 0%, rgba(239,68,68,0.02) 100%)',
-          borderTop: '1px solid rgba(239,68,68,0.2)',
-          borderBottom: '1px solid rgba(239,68,68,0.1)',
+          background: 'var(--critical-dim)',
+          borderTop: '1px solid var(--critical-border)',
           display: 'flex', alignItems: 'flex-start', gap: 8,
         }}>
           <span style={{
             flexShrink: 0, fontSize: 9, fontFamily: 'var(--font-mono)',
-            color: '#ef4444', background: 'rgba(239,68,68,0.12)',
-            border: '1px solid rgba(239,68,68,0.3)', borderRadius: 4,
+            color: 'var(--critical)', background: 'var(--critical-dim)',
+            border: '1px solid var(--critical-border)', borderRadius: 4,
             padding: '2px 6px', whiteSpace: 'nowrap', letterSpacing: '0.06em', marginTop: 1,
           }}>
             BREACH MATCH
           </span>
-          <span style={{ fontSize: 11, color: '#fca5a5', fontFamily: 'var(--font-mono)', lineHeight: 1.5 }}>
+          <span style={{ fontSize: 11, color: 'var(--critical)', fontFamily: 'var(--font-mono)', lineHeight: 1.5 }}>
             {chain.historical_similarity}
           </span>
         </div>
@@ -179,28 +192,54 @@ function ChainCard({ chain, index, onFixClick }) {
               </div>
             </div>
           ))}
+
+          {sandbox && (
+            <div style={{ marginTop: 'var(--space-4)', borderTop: '1px solid var(--surface-border)', paddingTop: 'var(--space-3)' }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--primary)', marginBottom: 'var(--space-2)' }}>
+                🛡️ AI-Generated Micro-Firewall (AppArmor)
+              </div>
+              <pre style={{ margin: 0, padding: 'var(--space-3)', background: 'rgba(0,0,0,0.2)', borderRadius: 'var(--radius-sm)', fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
+                {sandbox.content}
+              </pre>
+            </div>
+          )}
         </div>
       )}
     </div>
   )
-}
+})
 
-function StreamFeed({ lines }) {
+const StreamFeed = React.memo(function StreamFeed({ lines }) {
   const bottomRef = useRef(null)
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [lines])
 
   return (
-    <div className="stream-feed">
+    <div style={{
+      background: '#F8FAFF',
+      border: '1px solid var(--surface-border)',
+      borderRadius: 'var(--radius-md)',
+      padding: 'var(--space-3) var(--space-4)',
+      height: 160,
+      overflowY: 'auto',
+      fontFamily: 'var(--font-mono)',
+      fontSize: 11,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 2,
+    }}>
       {lines.map((line, i) => (
         <span
           key={i}
-          className={`stream-line ${
-            line.type === 'error'       ? 'error'   :
-            line.type === 'stage_start' ? 'stage'   :
-            line.type === 'done'        ? 'success' : ''
-          }`}
+          style={{
+            color:
+              line.type === 'error'       ? 'var(--critical)' :
+              line.type === 'stage_start' ? 'var(--primary-dark)' :
+              line.type === 'done'        ? 'var(--safe)' :
+              'var(--text-secondary)',
+            lineHeight: 1.5,
+          }}
         >
           {line.message}
         </span>
@@ -208,7 +247,7 @@ function StreamFeed({ lines }) {
       <div ref={bottomRef} />
     </div>
   )
-}
+})
 
 export default function Results() {
   const { runId }   = useParams()
@@ -221,10 +260,78 @@ export default function Results() {
   const [cloneStatus, setCloneStatus]   = useState(null)  // null | 'pending' | 'kept' | 'deleted'
   const [clonePath, setClonePath]       = useState(null)
   const [activeFixStep, setActiveFixStep] = useState(null)
+  const [searchInput, setSearchInput]   = useState('')
+  const [graphSearch, setGraphSearch]   = useState('')
+  const [previewFile, setPreviewFile]   = useState(null)
+
+  useEffect(() => {
+    const t = setTimeout(() => setGraphSearch(searchInput), 300)
+    return () => clearTimeout(t)
+  }, [searchInput])
+
+  const handleNodeClick = useCallback(async (node) => {
+    if (node.id) {
+      try {
+        const res = await fetch(`${BACKEND}/api/runs/${runId}/file?path=${encodeURIComponent(node.id)}`)
+        if (res.ok) {
+          const json = await res.json()
+          setPreviewFile({ path: node.id, content: json.content })
+        }
+      } catch (e) {
+        console.error(e)
+      }
+    }
+  }, [runId])
+
+  const exportCSV = useCallback(() => {
+    if (!data) return
+    let csv = "Severity,Source,Rule,File,Line,Description\\n"
+    data.findings.forEach(f => {
+      csv += `"${f.severity}","${f.source}","${f.rule_id}","${f.file_path}","${f.line_start || ''}","${f.message.replace(/"/g, '""')}"\\n`
+    })
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `compliance_report_run_${runId}.csv`
+    a.click()
+  }, [data, runId])
 
   const addLog = useCallback((entry) => {
     setLogs(prev => [...prev.slice(-200), entry])
   }, [])
+
+  const handlePublishIntel = async () => {
+    try {
+      const res = await fetch(`${BACKEND}/api/threat-intel/publish/${runId}`, {
+        method: 'POST'
+      })
+      const result = await res.json()
+      if (result.status === 'ok') {
+        alert(`Published ${result.published} chains to decentralized threat intel network.`)
+      } else {
+        alert('No chains to publish or error occurred.')
+      }
+    } catch (e) {
+      alert(`Error publishing: ${e.message}`)
+    }
+  }
+
+  const handleChaos = async () => {
+    if (!window.confirm("Are you sure you want to inject a live vulnerability into the cloned repository branch?")) return;
+    
+    try {
+      const res = await fetch(`${BACKEND}/api/runs/${runId}/chaos`, { method: 'POST' })
+      const result = await res.json()
+      if (res.ok) {
+        alert(result.message)
+      } else {
+        alert(`Failed: ${result.detail}`)
+      }
+    } catch (e) {
+      alert(`Error triggering chaos mode: ${e.message}`)
+    }
+  }
 
   const handleClone = useCallback(async (action) => {
     setCloneStatus('pending')
@@ -347,20 +454,17 @@ export default function Results() {
       {/* Clone decision banner — appears once analysis finishes */}
       {cloneStatus === 'available' && (
         <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          gap: 'var(--space-4)',
-          padding: 'var(--space-3) var(--space-5)',
-          background: 'var(--surface-raised)',
-          border: '1px solid var(--surface-border)',
-          borderRadius: 'var(--radius-md)',
-          marginBottom: 'var(--space-5)',
+          padding: 'var(--space-4) var(--space-5)',
+          background: 'var(--warning-dim)', border: '1px solid var(--warning-border)',
+          borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-6)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-4)'
         }}>
           <div>
-            <span style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 500 }}>
-              Cloned repository is still on disk.
-            </span>
-            <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginLeft: 8, fontFamily: 'var(--font-mono)' }}>
-              Keep it for manual review, or delete it to free space.
+            <div style={{ fontWeight: 600, color: 'var(--warning)', fontSize: 13, marginBottom: 2 }}>
+              Repository Quarantined in Security Box
+            </div>
+            <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+              Execute permissions are disabled to prevent malware spread. Extract to normal path, or securely wipe completely (bypasses recycle bin).
             </span>
           </div>
           <div className="flex gap-2">
@@ -369,7 +473,7 @@ export default function Results() {
               onClick={() => handleClone('keep')}
               disabled={cloneStatus === 'pending'}
             >
-              Keep clone
+              Extract to Safe Path
             </button>
             <button
               className="btn btn-sm"
@@ -377,7 +481,7 @@ export default function Results() {
               onClick={() => handleClone('delete')}
               disabled={cloneStatus === 'pending'}
             >
-              Delete clone
+              Secure Destroy (Irreversible)
             </button>
           </div>
         </div>
@@ -390,7 +494,7 @@ export default function Results() {
           borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-5)',
           fontSize: 12, color: 'var(--safe)',
         }}>
-          Clone preserved at{' '}
+          Clone extracted from Security Box to{' '}
           <code style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>{clonePath}</code>
         </div>
       )}
@@ -402,7 +506,7 @@ export default function Results() {
           borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-5)',
           fontSize: 12, color: 'var(--text-tertiary)',
         }}>
-          Clone deleted from disk.
+          Files completely wiped and destroyed. No recovery possible.
         </div>
       )}
 
@@ -410,6 +514,18 @@ export default function Results() {
       {data && (
 
         <>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
+            <button className="btn btn-sm" onClick={handleChaos} style={{ background: 'var(--critical-dim)', color: 'var(--critical)', border: '1px solid var(--critical-border)' }}>
+              <span style={{ fontSize: 13, marginRight: 6 }}>🧪</span> Inject Chaos
+            </button>
+            <button className="btn btn-sm btn-secondary" onClick={handlePublishIntel}>
+              <span style={{ fontSize: 13, marginRight: 6 }}>🌍</span> Publish to Threat Intel Network
+            </button>
+            <button className="btn btn-sm" onClick={exportCSV} style={{ background: 'var(--primary-dark)', color: 'white', border: 'none' }}>
+              Export Compliance Report (CSV)
+            </button>
+          </div>
+
           {/* Summary stats */}
           <div className="grid-4 mb-6">
             <div className="card card-sm">
@@ -446,18 +562,30 @@ export default function Results() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
             {/* Attack graph */}
             <div className="card" style={{ padding: 0, overflow: 'hidden', minHeight: 380 }}>
-              <div style={{ padding: 'var(--space-4) var(--space-5)', borderBottom: '1px solid var(--surface-border)' }}>
-                <div className="card-title">Code Attack Graph</div>
-                <div className="card-subtitle">
-                  Force-directed — drag nodes, scroll to zoom.
-                  {activeChain !== null && ' Highlighted nodes belong to selected chain.'}
+              <div style={{ padding: 'var(--space-4) var(--space-5)', borderBottom: '1px solid var(--surface-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <div className="card-title">Code Attack Graph</div>
+                  <div className="card-subtitle">
+                    Force-directed — drag nodes, scroll to zoom.
+                    {activeChain !== null && ' Highlighted nodes belong to selected chain.'}
+                  </div>
                 </div>
+                <input
+                  type="text"
+                  placeholder="Search files or modules..."
+                  className="form-input"
+                  style={{ width: 200, fontSize: 12, padding: '4px 8px' }}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                />
               </div>
               <div style={{ height: 460 }}>
                 <AttackGraph
                   nodes={data.graph?.nodes || []}
                   edges={data.graph?.edges || []}
                   highlightIds={highlightIds}
+                  searchQuery={graphSearch}
+                  onNodeClick={handleNodeClick}
                 />
               </div>
             </div>
@@ -472,15 +600,18 @@ export default function Results() {
                   </div>
                 </div>
               ) : (
-                data.chains.map((chain, i) => (
-                <div
-                  key={i}
-                  onMouseEnter={() => setActiveChain(i)}
-                  onMouseLeave={() => setActiveChain(null)}
-                >
-                  <ChainCard chain={chain} index={i} onFixClick={setActiveFixStep} />
-                </div>
-              ))
+                data.chains.map((chain, i) => {
+                  const sandbox = data.sandboxes?.find(s => s.chain_id === chain.id)
+                  return (
+                    <div
+                      key={i}
+                      onMouseEnter={() => setActiveChain(i)}
+                      onMouseLeave={() => setActiveChain(null)}
+                    >
+                      <ChainCard chain={chain} sandbox={sandbox} index={i} onFixClick={setActiveFixStep} />
+                    </div>
+                  )
+                })
               )}
             </div>
           </div>
@@ -544,6 +675,31 @@ export default function Results() {
           stepContext={activeFixStep} 
           onClose={() => setActiveFixStep(null)} 
         />
+      )}
+
+      {/* Render Code Preview Panel if a file is clicked */}
+      {previewFile && (
+        <div style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(4px)',
+          zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }} onClick={() => setPreviewFile(null)}>
+          <div style={{
+            width: '80%', height: '80%', background: 'var(--surface-void)',
+            border: '1px solid var(--surface-border)', borderRadius: 'var(--radius-lg)',
+            display: 'flex', flexDirection: 'column', overflow: 'hidden'
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--surface-border)', display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--primary)' }}>{previewFile.path}</span>
+              <button className="btn btn-sm btn-ghost" onClick={() => setPreviewFile(null)}>Close</button>
+            </div>
+            <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
+              <pre style={{ margin: 0, fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)' }}>
+                {previewFile.content}
+              </pre>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>
