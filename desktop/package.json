@@ -20,15 +20,15 @@
     "d3": "^7.9.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.23.1"
+    "react-router-dom": "^6.30.6"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
-    "electron": "^31.1.0",
+    "electron": "^42.11.16",
     "electron-builder": "^26.15.3",
-    "vite": "^5.3.1",
+    "vite": "^8.3.8",
     "wait-on": "^7.2.0"
   },
   "build": {
